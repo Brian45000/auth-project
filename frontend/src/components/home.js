@@ -14,19 +14,18 @@ export async function data_axios(url) {
 function Home() {
   const [Blog, setBlogs] = useState({});
   useEffect(() => {
-    data_axios("urlbrutamettre").then((res) => {
-      setBlogs(res);
+    data_axios("http://localhost:5000/blogs").then((res) => {
+      console.log(res);
+      //setBlogs(res);
     });
   }, []);
-  console.log(Blog);
-  // const navigate = useNavigate();
+  //console.log(Blog);
+  // const navigate = useNavigate();*/
 
   return (
-    <div>
-      <div>
-        <NavBar />
-      </div>
-      <div>{/*<Blog title={"titre"} acces={"acces"} user={"user"} />*/}</div>
+    <div style={{ width: "100%" }}>
+      <NavBar />
+      {/*<div>{/*<Blog title={"titre"} acces={"acces"} user={"user"} />}</div>*/}
     </div>
   );
 }

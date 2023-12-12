@@ -83,7 +83,42 @@ INSERT INTO Publications (Title, Date_creation, Description, Blog_ID, User_ID) V
 - Password = text ( hash )
 - type = text
 
-# Routes :
+# Inscription
+
+Un utilisateur peut s'enregistrer sur l'application en renseignant :
+
+- Nom et prénom,
+- Email,
+- Username
+- Mot de passe
+  L'application vérifie si l'utilisateur existe déjà ou non et l'insert par la suite en BD
+
+# Connexion basique
+
+L'application permet de se connecter avec identifiant mot de passe, tant que le compte existe dans la BD, le mot de passe est hashé en utilisant bcrypt.
+
+# Connexion avec Provider
+
+## Google et Microsoft
+
+L'application permet de se connecter directement avec Google et Microsoft, elle verifie si l'utilisateur existe ou non et l'insert par la suite en BD avec la colonne mot de passe vide
+
+# Two-Factor Authentification
+
+L'utilisateur une fois connecté recoit une notification comme quoi il peut s'authentifier en double facteur en passant dans "Mon compte" : " TFA Form " puis saisi son code.
+Il peut également générer son QRCode dans le menu "Mon Compte" et "Mon QRCode"
+la génération du QRCode se fera par rapport à l'email de l'utilisateur connecté.
+
+# Maintien de la connexion
+
+EN ATTENTE
+
+# Déconnexion
+
+EN ATTENTE
+L'utilisateur peut se déconnecter depuis l'application dans l'onglet "Mon Compte" mais il pourra également se déconnecter de tout les équipements depuis l'onglet "Mon Compte"
+
+# Liste des routes :
 
 ## Routes publiques :
 

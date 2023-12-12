@@ -1,12 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
-import "../assets/register.css";
+import { Link } from "react-router-dom";
+import "../../assets/formStyle.css";
 
 function Register() {
-  /*const [fullname, setFullname] = useState("");
-  const [email, setEmail] = useState("");
-  const [newUsername, setNewUsername] = useState("");
-  const [newPassword, setNewPassword] = useState("");*/
   const [values, setValues] = React.useState({
     fullname: "",
     email: "",
@@ -59,7 +56,12 @@ function Register() {
 
   return (
     <>
-      <form action="#" method="post" onSubmit={handleSubmit}>
+      <form
+        class="centered-form"
+        action="#"
+        method="post"
+        onSubmit={handleSubmit}
+      >
         <label for="fullname">Nom Complet:</label>
         <input
           type="text"
@@ -103,6 +105,7 @@ function Register() {
         <button type="submit">S'Inscrire</button>
       </form>
       <button onClick={registerWithGoogle}>Enregistrement avec Google</button>
+      <Link to="/login">Se connecter</Link>
     </>
   );
 }

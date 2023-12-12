@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
-import "../assets/login.css";
+import { Link } from "react-router-dom";
+import "../../assets/formStyle.css";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -55,12 +56,22 @@ function Login() {
     window.location.href = "http://localhost:5000/auth/google";
   };
 
+  const loginWithMicrosoft = () => {
+    // Redirige vers l'authentification Google
+    window.location.href = "http://localhost:5000/auth/microsoft";
+  };
+
   return (
     <>
       <aside>
         <ToastContainer />
       </aside>
-      <form action="#" method="post" onSubmit={handleSubmit}>
+      <form
+        class=".centered-form "
+        action="#"
+        method="post"
+        onSubmit={handleSubmit}
+      >
         <label htmlFor="username">Adresse mail:</label>
         <input
           type="text"
@@ -83,7 +94,11 @@ function Login() {
 
         <button type="submit">Se Connecter</button>
       </form>
-      <button onClick={loginWithGoogle}>Connexion avec Google</button>
+      <button onClick={loginWithGoogle}>Connexion avec Google 🔍</button>
+      <br />
+      <button onClick={loginWithMicrosoft}>Connexion avec Microsoft 🔑</button>
+
+      <Link to="/register">Créer un compte</Link>
     </>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import "../assets/login.css";
+import "../../assets/formStyle.css";
 
 const UpdatePublicationForm = ({ publicationData, onUpdate }) => {
   const [title, setTitle] = useState(publicationData.title || "");

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import "../assets/login.css";
+import "../../assets/formStyle.css";
 
 const CreateBlogForm = () => {
   const [title, setTitle] = useState("");
@@ -21,7 +21,7 @@ const CreateBlogForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form class="centered-form" onSubmit={handleSubmit}>
       <label htmlFor="title">Titre du Blog:</label>
       <input
         type="text"

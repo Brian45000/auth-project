@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import "../assets/login.css";
+import "../../assets/formStyle.css";
 
 const AddPublicationForm = () => {
   const [title, setTitle] = useState("");
@@ -24,7 +24,7 @@ const AddPublicationForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form class="centered-form" onSubmit={handleSubmit}>
       <label htmlFor="title">Titre de la Publication:</label>
       <input
         type="text"
