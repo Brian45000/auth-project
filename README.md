@@ -34,10 +34,10 @@ CREATE TABLE Publications (
 );
 
 -- Insertion de données dans la table Users
-INSERT INTO Users (FullName, Email, Username, Password) VALUES
-  ('Alice Dupont', 'alice@example.com', 'alice123', '$2y$10$WejmYkvWx1qVbdQiUGI8ReJNOMM3VRocvfkKKeMUAFgtaQvcg/fi6'), -- Password
-  ('Bob Martin', 'bob@example.com', 'bobmartin', '$2y$10$03a3zuTlxVJRcZQjh3cmR.w3HjsQFseVkiLtZ0z8H7osbSunfDXTG'), -- mdpsecret456
-  ('Claire Johnson', 'claire@example.com', 'clairej', '$2y$10$N.wVXRLxutohi6uLgJwoTutG9HJkT7JkUgDFaQn6ZPihu9aii.5nO'); -- p@ssword789
+INSERT INTO Users (FullName, Email, Username, Password, 2faIsActivated) VALUES
+  ('Alice Dupont', 'alice@example.com', 'alice123', '$2y$10$WejmYkvWx1qVbdQiUGI8ReJNOMM3VRocvfkKKeMUAFgtaQvcg/fi6', 1), -- Password
+  ('Bob Martin', 'bob@example.com', 'bobmartin', '$2y$10$03a3zuTlxVJRcZQjh3cmR.w3HjsQFseVkiLtZ0z8H7osbSunfDXTG', 0), -- mdpsecret456
+  ('Claire Johnson', 'claire@example.com', 'clairej', '$2y$10$N.wVXRLxutohi6uLgJwoTutG9HJkT7JkUgDFaQn6ZPihu9aii.5nO', 0); -- p@ssword789
 
 
 -- Insertion de données dans la table Blogs

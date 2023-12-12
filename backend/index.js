@@ -7,7 +7,7 @@ require("dotenv").config();
 
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const MicrosoftStrategy = require("passport-microsoft").Strategy;
+const GitHubStrategy = require("passport-github2").Strategy;
 
 const session = require("express-session");
 
@@ -45,33 +45,18 @@ passport.use(
   )
 );
 
-// Configuration de Passport Microsoft
+// Configuration de Passport GitHub
 passport.use(
-  new MicrosoftStrategy(
+  new GitHubStrategy(
     {
-      // Standard OAuth2 options
-      clientID: process.env.CLIENT_ID_MICROSOFT,
-      clientSecret: process.env.CLIENT_SECRET_MICROSOFT,
-      callbackURL: "http://localhost:3000/auth/microsoft/callback",
-      scope: ["user.read"],
-
-      /*// Microsoft specific options
-
-      // [Optional] The tenant for the application. Defaults to 'common'.
-      // Used to construct the authorizationURL and tokenURL
-      tenant: "common",
-
-      // [Optional] The authorization URL. Defaults to `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`
-      authorizationURL:
-        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-
-      // [Optional] The token URL. Defaults to `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`
-      tokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token",*/
+      clientID: process.env.CLIENT_ID_GITHUB,
+      clientSecret: process.env.CLIENT_SECRET_GITHUB,
+      callbackURL: "http://localhost:5000/auth/github/callback",
+      scope: ["user:email"], // Ajoutez cette ligne pour demander l'accès à l'adresse e-mail de l'utilisateur
     },
     function (accessToken, refreshToken, profile, done) {
-      User.findOrCreate({ userId: profile.id }, function (err, user) {
-        return done(err, user);
-      });
+      // Utilisateur authentifié
+      return done(null, profile);
     }
   )
 );
@@ -88,6 +73,59 @@ passport.deserializeUser((obj, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Fonction pour la vérification et l'ajout d'un utilisateur en base de données
+const verifyAndAddUser = (userData, redirectUrl) => {
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  connection.connect((err) => {
+    if (err) {
+      console.error("Erreur de connexion à la base de données :", err);
+      throw err;
+    }
+    console.log("Connecté à la base de données MySQL");
+  });
+
+  connection.query(
+    `SELECT * FROM users WHERE email = '${userData.email}'`,
+    async (err, results, fields) => {
+      if (results.length === 1) {
+        // L'utilisateur existe déjà, pas besoin de l'ajouter
+        connection.end(); // Fermer la connexion après usage
+        return redirectUrl();
+      } else {
+        // L'utilisateur n'existe pas, on le crée
+        const nouvelleLigne = {
+          fullname: userData.name,
+          email: userData.email,
+          username: userData.username,
+          password: "",
+        };
+
+        connection.query(
+          "INSERT INTO users SET ?",
+          nouvelleLigne,
+          (err, results, fields) => {
+            if (err) throw err;
+
+            console.log(
+              "Nouvelle ligne insérée avec succès. ID de la nouvelle ligne :",
+              results.insertId
+            );
+
+            connection.end(); // Fermer la connexion après usage
+            return redirectUrl();
+          }
+        );
+      }
+    }
+  );
+};
+
 // Route d'authentification Google
 app.get(
   "/auth/google",
@@ -101,79 +139,38 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    //
-    // A DECOUPER EN FONCTION POUR METTRE DANS MICROSOFT
-    // Peut etre un problème avec les infos récupérer
-    //
-    const connection = mysql.createConnection({
-      host: process.env.HOST_MYSQL,
-      user: process.env.USERNAME_MYSQL,
-      password: process.env.PASSWORD_MYSQL,
-      database: process.env.DATABASE_MYSQL,
+    userDataGoogle = {
+      name: `${req.user.name.familyName} ${req.user.name.givenName}`,
+      email: req.user.emails[0].value,
+      username: req.user.displayName,
+    };
+
+    verifyAndAddUser(userDataGoogle, () => {
+      // Successful authentication, redirect home.
+      res.redirect("http://localhost:3000/");
     });
-
-    connection.connect((err) => {
-      if (err) {
-        console.error("Erreur de connexion à la base de données :", err);
-        throw err;
-      }
-      console.log("Connecté à la base de données MySQL");
-    });
-    console.log(":(");
-
-    connection.query(
-      `SELECT * FROM users WHERE email = '${req.user.emails[0].value}'`,
-      async (err, results, fields) => {
-        if (results.length === 1) {
-          // Alors c'est bon.
-          res.redirect("http://localhost:3000/");
-        } else {
-          // Sinon, on le crée
-          const nouvelleLigne = {
-            fullname: `${req.user.name.familyName} ${req.user.name.givenName}`,
-            email: req.user.emails[0].value,
-            username: req.user.displayName,
-            password: "",
-          };
-
-          connection.query(
-            "INSERT INTO users SET ?",
-            nouvelleLigne,
-            (err, results, fields) => {
-              if (err) throw err;
-
-              console.log(
-                "Nouvelle ligne insérée avec succès. ID de la nouvelle ligne :",
-                results.insertId
-              );
-            }
-          );
-
-          res.redirect("http://localhost:3000/");
-        }
-      }
-    );
   }
 );
 
-// Route d'authentification Microsoft
-app.get(
-  "/auth/microsoft",
-  passport.authenticate("microsoft", {
-    // Optionally define any authentication parameters here
-    // For example, the ones in https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
+// Route d'authentification Github
+app.get("/auth/github", passport.authenticate("github", {}));
 
-    prompt: "select_account",
-  })
-);
-
-// Route callback Microsoft
+// Route callback GitHub
 app.get(
-  "/auth/microsoft/callback",
-  passport.authenticate("microsoft", { failureRedirect: "/login" }),
+  "/auth/github/callback",
+  passport.authenticate("github", { failureRedirect: "/login" }),
   function (req, res) {
-    // Successful authentication, redirect home.
-    res.redirect("http://localhost:3000/");
+    console.log(req.user);
+
+    userDataGitHub = {
+      name: req.user.displayName,
+      email: req.user.emails[0].value,
+      username: req.user.username,
+    };
+    verifyAndAddUser(userDataGitHub, () => {
+      // Successful authentication, redirect home.
+      res.redirect("http://localhost:3000/");
+    });
   }
 );
 
@@ -315,9 +312,11 @@ app.post("/login", async (req, res) => {
           // Alors c'est bon.
           console.log("C'est bon.");
 
+          checkIf2faIsActivated = results[0]["2faIsActivated"];
           res.send({
             status: "Success",
             message: "Connexion réussie",
+            is2faIsActivated: checkIf2faIsActivated,
           });
         } else {
           console.log("Pas bon compte");
@@ -403,14 +402,12 @@ app.post("/verify", (req, res) => {
     // Si le token n'est pas valide, c'est non
     const isValid = authenticator.check(token, authenticatorSecret);
     if (!isValid) {
-      console.log("PAS VALIDE");
       res.send({
         status: "Error",
         message: "Token Invalide",
       });
     } else {
       // Si le token est valide, c'est oui
-      console.log("VALIDE");
       res.send({
         status: "Success",
         message: "Code Valide",

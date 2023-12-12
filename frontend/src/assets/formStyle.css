@@ -3,10 +3,10 @@ body {
     background-color: #f4f4f4;
     margin: 0;
     padding: 0;
+    height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
 }
 
 .centered-form {
@@ -14,7 +14,6 @@ body {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 300px;
 }
 
 label {
@@ -37,9 +36,60 @@ button {
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
-    margin-bottom: 0.5em;
+    margin: 0.5em 0.5em;
 }
 
 button:hover {
     background-color: #45a049;
 }
+
+.btn-google {
+    background-color: #4285F4 ;
+}
+
+.btn-github {
+    background-color: #171515;
+}
+
+.btn-create-account {
+    background-color: #4caf50;
+    color: #fff;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+}
+.btn-retour {
+    background-color: #af4c4c;
+    color: #fff;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+}
+
+.btn-create-account a,
+.btn-retour a{
+    text-decoration: none;
+    color: #fff;
+}
+
+.btn-create-account:hover {
+    background-color: #45a049;
+}
+.btn-retour:hover{
+    background-color: #b94242;
+}
+.card-login {
+    background-color: white;
+    border-radius: 10px;
+    width: 500px;
+    padding: 1em;
+    border: 1px solid rgb(187, 187, 187);
+    box-shadow: 5px 5px 15px 5px rgba(0,0,0,0.19);
+}
+

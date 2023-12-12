@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../../assets/formStyle.css";
+import NavBar from "../NavBar";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 function Login() {
+  const navigate = useNavigate();
+
   const [identifiant, setIdentifiant] = useState("");
   const [mdp, setMdp] = useState("");
 
@@ -44,6 +47,11 @@ function Login() {
               toast.error(res.data.message);
             } else {
               toast.success(res.data.message);
+              if (res.data.is2faIsActivated === 1) {
+                navigate("/verify");
+              } else {
+                navigate("/home");
+              }
             }
           });
       };
@@ -56,49 +64,61 @@ function Login() {
     window.location.href = "http://localhost:5000/auth/google";
   };
 
-  const loginWithMicrosoft = () => {
+  const loginWithGithub = () => {
     // Redirige vers l'authentification Google
-    window.location.href = "http://localhost:5000/auth/microsoft";
+    window.location.href = "http://localhost:5000/auth/github";
   };
 
   return (
     <>
+      <NavBar />
       <aside>
         <ToastContainer />
       </aside>
-      <form
-        class=".centered-form "
-        action="#"
-        method="post"
-        onSubmit={handleSubmit}
-      >
-        <label htmlFor="username">Adresse mail:</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          value={identifiant}
-          onChange={handleIdentifiantChange}
-          required
-        />
 
-        <label htmlFor="password">Mot de passe:</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          value={mdp}
-          onChange={handleMdpChange}
-          required
-        />
+      <div className="card-login">
+        <form
+          class="centered-form "
+          action="#"
+          method="post"
+          onSubmit={handleSubmit}
+        >
+          <label htmlFor="username">Adresse mail :</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            value={identifiant}
+            onChange={handleIdentifiantChange}
+            placeholder="Saisir votre identifiant"
+            required
+          />
 
-        <button type="submit">Se Connecter</button>
-      </form>
-      <button onClick={loginWithGoogle}>Connexion avec Google 🔍</button>
-      <br />
-      <button onClick={loginWithMicrosoft}>Connexion avec Microsoft 🔑</button>
+          <label htmlFor="password">Mot de passe :</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={mdp}
+            onChange={handleMdpChange}
+            placeholder="Saisir votre mot de passe"
+            required
+          />
 
-      <Link to="/register">Créer un compte</Link>
+          <button type="submit">Se Connecter</button>
+
+          <button type="button" className="btn-create-account">
+            <Link to="/register">Créer un compte</Link>
+          </button>
+        </form>
+
+        <button className="btn-google" onClick={loginWithGoogle}>
+          Connexion avec Google 🔍
+        </button>
+        <button className="btn-github" onClick={loginWithGithub}>
+          Connexion avec Github 🔑
+        </button>
+      </div>
     </>
   );
 }

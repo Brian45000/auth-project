@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import "../../assets/formStyle.css";
+import NavBar from "../NavBar";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -52,10 +54,11 @@ function TfaForm() {
 
   return (
     <>
+      <NavBar />
       <aside>
         <ToastContainer />
       </aside>
-      <div>
+      <div className="card-login">
         <form
           class="centered-form"
           action="#"
@@ -73,6 +76,9 @@ function TfaForm() {
           />
 
           <button type="submit">Valider le Code</button>
+          <button type="button" className="btn-retour">
+            <Link to="/home">Pas pour le moment</Link>
+          </button>
         </form>
       </div>
     </>

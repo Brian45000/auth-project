@@ -23,7 +23,7 @@ function NavBar() {
         <li className="dropdown">
           <button className="dropbtn">Mon Compte 👇</button>
           <div className="dropdown-content">
-            <Link to={"/2fa"}>TFA Form 🔑</Link>
+            <Link to={"/verify"}>Activer mon accès 2FA 🔑</Link>
             <Link to={"/qrcode"}>Mon QRCode 🖼️</Link>
             <Link to={"/logout"}>Se déconnecter ❌</Link>
           </div>
