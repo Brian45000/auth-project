@@ -1,16 +1,41 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "../../assets/formStyle.css";
 import NavBar from "../NavBar";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-function TfaForm() {
+function Enable2faForm() {
   const navigate = useNavigate();
+  // Utilisez useLocation pour obtenir l'objet location
+  const location = useLocation();
+
+  // Utilisez location.search pour obtenir la chaîne de requête (ex: "?param1=valeur1&param2=valeur2")
+  const searchParams = new URLSearchParams(location.search);
+
+  // Utilisez get pour récupérer la valeur d'un paramètre spécifique
+  const emailUser = searchParams.get("email");
+
   const [code, setCode] = useState("");
+  const [imageQRCode, setImageQRCode] = useState("");
+
+  useEffect(() => {
+    const getQrCode = async () => {
+      await axios
+        .get(`http://localhost:5000/qrcode/${emailUser}`)
+        .then((res) => {
+          if (res.data.status === "Error") {
+            toast.error(res.data.message);
+          } else {
+            setImageQRCode(res.data.qrcode);
+          }
+        });
+    };
+    getQrCode();
+  }, []);
 
   const handleCodeChange = (e) => {
     setCode(e.target.value);
@@ -19,8 +44,8 @@ function TfaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sendLogin = async () => {
-      const data = [code];
-      const columnNames = ["token"];
+      const data = [code, emailUser];
+      const columnNames = ["token", "emailUser"];
 
       const jsonData = [
         data.reduce((obj, val, i) => {
@@ -30,7 +55,7 @@ function TfaForm() {
       ];
 
       await axios
-        .post("http://localhost:5000/verify", JSON.stringify(jsonData), {
+        .post("http://localhost:5000/enable-2fa", JSON.stringify(jsonData), {
           headers: {
             "Content-Type": "application/json",
           },
@@ -40,10 +65,7 @@ function TfaForm() {
             toast.error(res.data.message);
           } else {
             toast.success(res.data.message);
-            setTimeout(
-              navigate("/home", { state: { doubleauth: "true" } }),
-              5000
-            );
+            navigate("/home");
           }
         });
     };
@@ -65,7 +87,15 @@ function TfaForm() {
           method="post"
           onSubmit={handleSubmit}
         >
-          <label for="authCode">Code d'Authentification à Deux Facteurs:</label>
+          <label for="authCode">
+            Voulez vous activer l'Authentification à Deux Facteurs:
+          </label>
+
+          {imageQRCode && (
+            <div dangerouslySetInnerHTML={{ __html: imageQRCode }} />
+          )}
+
+          <label for="authCode">Saisir le code:</label>
           <input
             type="text"
             id="authCode"
@@ -86,4 +116,4 @@ function TfaForm() {
   );
 }
 
-export default TfaForm;
+export default Enable2faForm;

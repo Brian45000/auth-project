@@ -1,7 +1,10 @@
 import "./styles.css";
 import { Link } from "react-router-dom";
-
+import { user_info } from "../../store/selector";
+import { useSelector } from "react-redux";
 function NavBar() {
+  let user = useSelector(user_info);
+  console.log(user);
   return (
     <nav className="navbar">
       <ul>

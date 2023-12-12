@@ -25,6 +25,13 @@ function Home() {
   return (
     <div style={{ width: "100%" }}>
       <NavBar />
+      {blogs && (
+        <div>
+          {blogs["blogs"]?.map((blog) => (
+            <Blog title={blog.Title} acces={blog.Access} key={blog.ID_blog} />
+          ))}
+        </div>
+      )}
       {/*blogs?.map((blog) => (
         <Blog title={blog.title} acces={blog.acces} user={blog.user} />
       ))}

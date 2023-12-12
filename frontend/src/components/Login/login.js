@@ -50,7 +50,7 @@ function Login() {
               if (res.data.is2faIsActivated === 1) {
                 navigate("/verify");
               } else {
-                navigate("/home");
+                navigate("/enable-2fa?email=" + res.data.email);
               }
             }
           });

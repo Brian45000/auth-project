@@ -74,57 +74,75 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Fonction pour la vérification et l'ajout d'un utilisateur en base de données
-const verifyAndAddUser = (userData, redirectUrl) => {
-  const connection = mysql.createConnection({
-    host: process.env.HOST_MYSQL,
-    user: process.env.USERNAME_MYSQL,
-    password: process.env.PASSWORD_MYSQL,
-    database: process.env.DATABASE_MYSQL,
-  });
+async function verifyAndAddUser(userData) {
+  return new Promise((resolve, reject) => {
+    const connection = mysql.createConnection({
+      host: process.env.HOST_MYSQL,
+      user: process.env.USERNAME_MYSQL,
+      password: process.env.PASSWORD_MYSQL,
+      database: process.env.DATABASE_MYSQL,
+    });
 
-  connection.connect((err) => {
-    if (err) {
-      console.error("Erreur de connexion à la base de données :", err);
-      throw err;
-    }
-    console.log("Connecté à la base de données MySQL");
-  });
-
-  connection.query(
-    `SELECT * FROM users WHERE email = '${userData.email}'`,
-    async (err, results, fields) => {
-      if (results.length === 1) {
-        // L'utilisateur existe déjà, pas besoin de l'ajouter
-        connection.end(); // Fermer la connexion après usage
-        return redirectUrl();
-      } else {
-        // L'utilisateur n'existe pas, on le crée
-        const nouvelleLigne = {
-          fullname: userData.name,
-          email: userData.email,
-          username: userData.username,
-          password: "",
-        };
-
-        connection.query(
-          "INSERT INTO users SET ?",
-          nouvelleLigne,
-          (err, results, fields) => {
-            if (err) throw err;
-
-            console.log(
-              "Nouvelle ligne insérée avec succès. ID de la nouvelle ligne :",
-              results.insertId
-            );
-
-            connection.end(); // Fermer la connexion après usage
-            return redirectUrl();
-          }
-        );
+    connection.connect((err) => {
+      if (err) {
+        console.error("Erreur de connexion à la base de données :", err);
+        reject(err);
       }
-    }
-  );
-};
+      console.log("Connecté à la base de données MySQL");
+    });
+
+    connection.query(
+      `SELECT * FROM users WHERE email = '${userData.email}'`,
+      async (err, results, fields) => {
+        if (results.length === 1) {
+          connection.end();
+
+          if (results[0]["2faIsActivated"] === 1) {
+            console.log("1");
+            resolve("http://localhost:3000/verify");
+          } else {
+            console.log("2");
+            console.log(
+              "URL AVANT : ",
+              `http://localhost:3000/enable-2fa?email=${userData.email}`
+            );
+            resolve(`http://localhost:3000/enable-2fa?email=${userData.email}`);
+          }
+        } else {
+          console.log("3");
+
+          const nouvelleLigne = {
+            fullname: userData.name,
+            email: userData.email,
+            username: userData.username,
+            password: "",
+          };
+
+          connection.query(
+            "INSERT INTO users SET ?",
+            nouvelleLigne,
+            (err, results, fields) => {
+              if (err) {
+                connection.end();
+                reject(err);
+              }
+
+              console.log(
+                "Nouvelle ligne insérée avec succès. ID de la nouvelle ligne :",
+                results.insertId
+              );
+
+              connection.end();
+              resolve(
+                `http://localhost:3000/enable-2fa?email=${userData.email}`
+              );
+            }
+          );
+        }
+      }
+    );
+  });
+}
 
 // Route d'authentification Google
 app.get(
@@ -134,21 +152,30 @@ app.get(
   })
 );
 
-// Route callback Google
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
-  (req, res) => {
+  async (req, res) => {
     userDataGoogle = {
       name: `${req.user.name.familyName} ${req.user.name.givenName}`,
       email: req.user.emails[0].value,
       username: req.user.displayName,
     };
 
-    verifyAndAddUser(userDataGoogle, () => {
-      // Successful authentication, redirect home.
-      res.redirect("http://localhost:3000/");
-    });
+    console.log("ICIIII");
+    //
+    //
+    //PENSER A FAIRE PAREIL DANS GITHUB
+    //
+    //
+    try {
+      const urlDirection = await verifyAndAddUser(userDataGoogle);
+      console.log("URL : ", urlDirection);
+      res.redirect(urlDirection);
+    } catch (error) {
+      console.error("Erreur dans verifyAndAddUser :", error);
+      res.status(500).send("Internal Server Error");
+    }
   }
 );
 
@@ -305,8 +332,6 @@ app.post("/login", async (req, res) => {
       if (results.length === 1) {
         const passwordHash = results[0]["Password"];
 
-        console.log("mdp :", mdp);
-        console.log("hash:", passwordHash);
         const isPasswordValid = await bcrypt.compare(mdp, passwordHash);
         if (isPasswordValid) {
           // Alors c'est bon.
@@ -317,6 +342,7 @@ app.post("/login", async (req, res) => {
             status: "Success",
             message: "Connexion réussie",
             is2faIsActivated: checkIf2faIsActivated,
+            email: identifiant,
           });
         } else {
           console.log("Pas bon compte");
@@ -362,25 +388,28 @@ app.get("/blogs", (req, res) => {
 
 app.get("/qrcode/:user", (req, res) => {
   const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
-  // Le nom d'utilisateur de la personne connectée
   const user = req.params.user;
-  console.log(user);
-  // Le nom de votre service (à vous de le définir)
   const service = "ProjetDevAuthLiveCampus";
 
-  // Crée une clef pour l'application d'authentification
   const otpauth = authenticator.keyuri(user, service, authenticatorSecret);
-  // Génère un qrcode à partir de cette clef
+
   qrcode.toDataURL(otpauth, (err, imageUrl) => {
     if (err) {
       console.log("Error with QR");
+      res.status(500).send({
+        status: "Error",
+        message: "Internal Server Error",
+      });
       return;
     }
-    res.writeHead(200, "OK", {
-      "Content-Type": "text/html",
+
+    console.log("Image : ", imageUrl);
+
+    res.send({
+      //status: "Success",
+      //message: "Code Valide",
+      qrcode: "<img src='" + imageUrl + "' alt='qrcode'>",
     });
-    res.write("<img src='" + imageUrl + "' alt='qrcode'>");
-    res.end();
   });
 });
 
@@ -418,6 +447,68 @@ app.post("/verify", (req, res) => {
     // Possible errors
     // - options validation
     // - "Invalid input - it is not base32 encoded string" (if thiry-two is used)
+    console.error(err);
+    res.send({
+      status: "Error",
+      message: err.message,
+    });
+  }
+});
+
+app.post("/enable-2fa", (req, res) => {
+  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+  //Récupération du code saisi par l'utilisateur
+  const token = req.body[0].token;
+  const emailUser = req.body[0].emailUser;
+
+  try {
+    // Si la personne n'a pas saisi le token, c'est non
+    if (!token) {
+      console.log("PAS DE TOKEN");
+      res.send({
+        status: "Error",
+        message: "Veuillez saisir un code ! ",
+      });
+    }
+
+    // Si le token n'est pas valide, c'est non
+    const isValid = authenticator.check(token, authenticatorSecret);
+    if (!isValid) {
+      res.send({
+        status: "Error",
+        message: "Token Invalide",
+      });
+    } else {
+      // Si le token est valide, c'est oui
+
+      // Update dans la BD
+      const connection = mysql.createConnection({
+        host: process.env.HOST_MYSQL,
+        user: process.env.USERNAME_MYSQL,
+        password: process.env.PASSWORD_MYSQL,
+        database: process.env.DATABASE_MYSQL,
+      });
+
+      connection.query(
+        `UPDATE USERS SET 2faIsActivated = 1 WHERE Email = '${emailUser}'`,
+        async (err, results, fields) => {
+          if (!err) {
+            // Redirection vers Home avec stockage de la double authent
+            res.send({
+              status: "Success",
+              message: "Code Valide",
+            });
+          } else {
+            console.error("Erreur de connexion à la base de données :", err);
+            res.send({
+              status: "Error",
+              message: "Impossible de mettre à jour le compte :" + err,
+            });
+          }
+        }
+      );
+    }
+  } catch (err) {
     console.error(err);
     res.send({
       status: "Error",
