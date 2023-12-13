@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const bodyParser = require("body-parser");
+const jwt = require("jsonwebtoken");
 
 require("dotenv").config();
 
@@ -27,6 +30,7 @@ app.use(cors());
 // Initialisation de Passport et utilisation de sessions
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(cookieParser());
 
 // Configuration de Passport Google
 passport.use(
@@ -98,19 +102,11 @@ async function verifyAndAddUser(userData) {
           connection.end();
 
           if (results[0]["2faIsActivated"] === 1) {
-            console.log("1");
             resolve("http://localhost:3000/verify");
           } else {
-            console.log("2");
-            console.log(
-              "URL AVANT : ",
-              `http://localhost:3000/enable-2fa?email=${userData.email}`
-            );
             resolve(`http://localhost:3000/enable-2fa?email=${userData.email}`);
           }
         } else {
-          console.log("3");
-
           const nouvelleLigne = {
             fullname: userData.name,
             email: userData.email,
@@ -162,15 +158,8 @@ app.get(
       username: req.user.displayName,
     };
 
-    console.log("ICIIII");
-    //
-    //
-    //PENSER A FAIRE PAREIL DANS GITHUB
-    //
-    //
     try {
       const urlDirection = await verifyAndAddUser(userDataGoogle);
-      console.log("URL : ", urlDirection);
       res.redirect(urlDirection);
     } catch (error) {
       console.error("Erreur dans verifyAndAddUser :", error);
@@ -186,7 +175,7 @@ app.get("/auth/github", passport.authenticate("github", {}));
 app.get(
   "/auth/github/callback",
   passport.authenticate("github", { failureRedirect: "/login" }),
-  function (req, res) {
+  async (req, res) => {
     console.log(req.user);
 
     userDataGitHub = {
@@ -194,10 +183,14 @@ app.get(
       email: req.user.emails[0].value,
       username: req.user.username,
     };
-    verifyAndAddUser(userDataGitHub, () => {
-      // Successful authentication, redirect home.
-      res.redirect("http://localhost:3000/");
-    });
+
+    try {
+      const urlDirection = await verifyAndAddUser(userDataGitHub);
+      res.redirect(urlDirection);
+    } catch (error) {
+      console.error("Erreur dans verifyAndAddUser :", error);
+      res.status(500).send("Internal Server Error");
+    }
   }
 );
 
@@ -338,11 +331,28 @@ app.post("/login", async (req, res) => {
           console.log("C'est bon.");
 
           checkIf2faIsActivated = results[0]["2faIsActivated"];
+
+          // On génère le JWT
+          var tokenJWT = jwt.sign(
+            {
+              iss: "http://localhost",
+              loggedIn: true,
+              doubleAuthent: false,
+              email: identifiant,
+              username: results[0]["Username"],
+            },
+            process.env.SECRET_KEY_JWT
+          );
+          // { expiresIn: '2d' } pour rajouter un délai d'expiration sur le JWT
+
+          res.cookie("tokenJWT", tokenJWT);
+          //localStorage.setItem("tokenJWT", tokenJWT);
           res.send({
             status: "Success",
             message: "Connexion réussie",
             is2faIsActivated: checkIf2faIsActivated,
             email: identifiant,
+            tokenJWT: tokenJWT,
           });
         } else {
           console.log("Pas bon compte");
@@ -386,6 +396,34 @@ app.get("/blogs", (req, res) => {
   });
 });
 
+// Route pour récupérer l'intégralité des blogs
+app.get("/blog", (req, res) => {
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  const id_blog = req.query.idblog;
+
+  connection.query(
+    `SELECT * from blogs WHERE ID_blog = ${id_blog}`,
+    async (err, results, fields) => {
+      if (results.length != 0) {
+        res.send({
+          blog: results[0],
+        });
+      } else {
+        res.send({
+          status: "Error",
+          message: "echec envoi des blogs",
+        });
+      }
+    }
+  );
+});
+
 app.get("/qrcode/:user", (req, res) => {
   const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
   const user = req.params.user;
@@ -417,6 +455,7 @@ app.post("/verify", (req, res) => {
   const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
   //Récupération du code saisi par l'utilisateur
   const token = req.body[0].token;
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
 
   try {
     // Si la personne n'a pas saisi le token, c'est non
@@ -433,20 +472,30 @@ app.post("/verify", (req, res) => {
     if (!isValid) {
       res.send({
         status: "Error",
-        message: "Token Invalide",
+        message: "Code Invalide",
       });
     } else {
       // Si le token est valide, c'est oui
-      res.send({
-        status: "Success",
-        message: "Code Valide",
-      });
+      try {
+        var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+        decoded.doubleAuthent = true;
+        tokenJWT = jwt.sign(decoded, process.env.SECRET_KEY_JWT);
+        res.send({
+          status: "Success",
+          message: "Code Valide",
+          tokenJWT: tokenJWT,
+        });
+      } catch (error) {
+        console.log(error);
+        res.send({
+          status: "Error",
+          message: error.message,
+        });
+
+        return;
+      }
     }
   } catch (err) {
-    // On affiche l'erreur à l'utilisateur
-    // Possible errors
-    // - options validation
-    // - "Invalid input - it is not base32 encoded string" (if thiry-two is used)
     console.error(err);
     res.send({
       status: "Error",

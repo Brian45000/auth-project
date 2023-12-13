@@ -3,7 +3,7 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import "../../assets/formStyle.css";
 import NavBar from "../NavBar";
-
+import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -12,6 +12,8 @@ function Login() {
 
   const [identifiant, setIdentifiant] = useState("");
   const [mdp, setMdp] = useState("");
+
+  const [cookies, setCookie, removeCookie] = useCookies(["tokenJWT"]);
 
   const handleIdentifiantChange = (e) => {
     setIdentifiant(e.target.value);
@@ -47,6 +49,7 @@ function Login() {
               toast.error(res.data.message);
             } else {
               toast.success(res.data.message);
+              setCookie("tokenJWT", res.data.tokenJWT, { path: "/" });
               if (res.data.is2faIsActivated === 1) {
                 navigate("/verify");
               } else {

@@ -36,9 +36,9 @@ CREATE TABLE Publications (
 
 -- Insertion de données dans la table Users
 INSERT INTO Users (FullName, Email, Username, Password, 2faIsActivated) VALUES
-  ('Alice Dupont', 'alice@example.com', 'alice123', '$2y$10$WejmYkvWx1qVbdQiUGI8ReJNOMM3VRocvfkKKeMUAFgtaQvcg/fi6', 1), -- Password
-  ('Bob Martin', 'bob@example.com', 'bobmartin', '$2y$10$03a3zuTlxVJRcZQjh3cmR.w3HjsQFseVkiLtZ0z8H7osbSunfDXTG', 0), -- mdpsecret456
-  ('Claire Johnson', 'claire@example.com', 'clairej', '$2y$10$N.wVXRLxutohi6uLgJwoTutG9HJkT7JkUgDFaQn6ZPihu9aii.5nO', 0); -- p@ssword789
+  ('Alice Dupont', 'alice@example.com', 'alice123', '$2b$10$S/Fy0WYR4tusswl6A/xtfe1y4lVCLXt9P8HJrZe6P5VO1bfhV60eO', 1), -- Password
+  ('Bob Martin', 'bob@example.com', 'bobmartin', '$2b$10$S/Fy0WYR4tusswl6A/xtfe1y4lVCLXt9P8HJrZe6P5VO1bfhV60eO', 0), -- Password
+  ('Claire Johnson', 'claire@example.com', 'clairej', '$2b$10$S/Fy0WYR4tusswl6A/xtfe1y4lVCLXt9P8HJrZe6P5VO1bfhV60eO', 0); -- Password
 
 
 -- Insertion de données dans la table Blogs
@@ -112,7 +112,7 @@ la génération du QRCode se fera par rapport à l'email de l'utilisateur connec
 
 # Maintien de la connexion
 
-EN ATTENTE
+Mise en place d'un JWT,
 
 # Déconnexion
 

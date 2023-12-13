@@ -4,7 +4,6 @@ import { user_info } from "../../store/selector";
 import { useSelector } from "react-redux";
 function NavBar() {
   let user = useSelector(user_info);
-  console.log(user);
   return (
     <nav className="navbar">
       <ul>
@@ -29,6 +28,7 @@ function NavBar() {
             <Link to={"/verify"}>Activer mon accès 2FA 🔑</Link>
             <Link to={"/qrcode"}>Mon QRCode 🖼️</Link>
             <Link to={"/logout"}>Se déconnecter ❌</Link>
+            <Link to={"/logoutAll"}>Se déconnecter de PARTOUT ❌</Link>
           </div>
         </li>
       </ul>

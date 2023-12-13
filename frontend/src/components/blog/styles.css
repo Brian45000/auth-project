@@ -1,0 +1,50 @@
+
+.blog-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Espacement entre les blog-cards */
+  }
+  
+  .blog-card {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 300px; /* Largeur fixe de chaque blog-card, ajustez selon vos besoins */
+  }
+  
+  .blog-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    word-wrap: break-word; /* Permet aux mots longs de revenir à la ligne */
+  }
+  
+  .blog-access {
+    margin-bottom: 8px;
+  }
+  
+  .blog-created-by {
+    color: #555;
+  }
+  
+  .blog-card p {
+    margin: 0;
+  }
+
+.detail-button {
+    background-color: #4caf50;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+  }
+  
+  .detail-button:hover {
+    background-color: #45a049;
+  }
+  

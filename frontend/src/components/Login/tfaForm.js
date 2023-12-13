@@ -4,13 +4,15 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import "../../assets/formStyle.css";
 import NavBar from "../NavBar";
-
+import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 function TfaForm() {
   const navigate = useNavigate();
   const [code, setCode] = useState("");
+
+  const [cookies, setCookie] = useCookies(["tokenJWT"]);
 
   const handleCodeChange = (e) => {
     setCode(e.target.value);
@@ -19,8 +21,8 @@ function TfaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sendLogin = async () => {
-      const data = [code];
-      const columnNames = ["token"];
+      const data = [code, cookies];
+      const columnNames = ["token", "tokenJWT"];
 
       const jsonData = [
         data.reduce((obj, val, i) => {
@@ -40,10 +42,8 @@ function TfaForm() {
             toast.error(res.data.message);
           } else {
             toast.success(res.data.message);
-            setTimeout(
-              navigate("/home", { state: { doubleauth: "true" } }),
-              5000
-            );
+            setCookie("tokenJWT", res.data.tokenJWT, { path: "/" });
+            setTimeout(navigate("/home"), 5000);
           }
         });
     };
