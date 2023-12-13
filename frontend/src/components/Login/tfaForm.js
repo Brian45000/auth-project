@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "../../assets/formStyle.css";
 import NavBar from "../NavBar";
 import { useCookies } from "react-cookie";
@@ -10,9 +10,23 @@ import "react-toastify/dist/ReactToastify.css";
 
 function TfaForm() {
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+
+  // Utilisez useLocation pour obtenir l'objet location
+  const location = useLocation();
+
+  // Utilisez location.search pour obtenir la chaîne de requête (ex: "?param1=valeur1&param2=valeur2")
+  const searchParams = new URLSearchParams(location.search);
+
+  // Utilisez get pour récupérer la valeur d'un paramètre spécifique
+  let tokenJWT = searchParams.get("tokenJWT");
 
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
+
+  if (tokenJWT) {
+    setCookie("tokenJWT", tokenJWT, { path: "/" });
+  }
+
+  const [code, setCode] = useState("");
 
   const handleCodeChange = (e) => {
     setCode(e.target.value);

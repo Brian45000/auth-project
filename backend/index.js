@@ -95,6 +95,17 @@ async function verifyAndAddUser(userData) {
       console.log("Connecté à la base de données MySQL");
     });
 
+    var tokenJWT = jwt.sign(
+      {
+        iss: "http://localhost",
+        loggedIn: true,
+        doubleAuthent: false,
+        email: userData.email,
+        username: userData.username,
+      },
+      process.env.SECRET_KEY_JWT
+    );
+
     connection.query(
       `SELECT * FROM users WHERE email = '${userData.email}'`,
       async (err, results, fields) => {
@@ -102,9 +113,11 @@ async function verifyAndAddUser(userData) {
           connection.end();
 
           if (results[0]["2faIsActivated"] === 1) {
-            resolve("http://localhost:3000/verify");
+            resolve(`http://localhost:3000/verify?tokenJWT=${tokenJWT}`);
           } else {
-            resolve(`http://localhost:3000/enable-2fa?email=${userData.email}`);
+            resolve(
+              `http://localhost:3000/enable-2fa?email=${userData.email}&tokenJWT=${tokenJWT}`
+            );
           }
         } else {
           const nouvelleLigne = {
@@ -130,7 +143,7 @@ async function verifyAndAddUser(userData) {
 
               connection.end();
               resolve(
-                `http://localhost:3000/enable-2fa?email=${userData.email}`
+                `http://localhost:3000/enable-2fa?email=${userData.email}&tokenJWT=${tokenJWT}`
               );
             }
           );
@@ -345,8 +358,6 @@ app.post("/login", async (req, res) => {
           );
           // { expiresIn: '2d' } pour rajouter un délai d'expiration sur le JWT
 
-          res.cookie("tokenJWT", tokenJWT);
-          //localStorage.setItem("tokenJWT", tokenJWT);
           res.send({
             status: "Success",
             message: "Connexion réussie",
@@ -374,7 +385,10 @@ app.post("/login", async (req, res) => {
   );
 });
 // Route pour récupérer l'intégralité des blogs
-app.get("/blogs", (req, res) => {
+app.post("/blogs", (req, res) => {
+  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+  let SQLquery;
   const connection = mysql.createConnection({
     host: process.env.HOST_MYSQL,
     user: process.env.USERNAME_MYSQL,
@@ -382,7 +396,27 @@ app.get("/blogs", (req, res) => {
     database: process.env.DATABASE_MYSQL,
   });
 
-  connection.query(`SELECT * from blogs`, async (err, results, fields) => {
+  SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, count(publications.ID_publication) AS nb_publi
+  FROM blogs
+  INNER JOIN users ON blogs.User_ID = users.ID_user
+  INNER JOIN publications ON blogs.ID_blog = publications.Blog_ID
+  WHERE blogs.Access = 'Public'
+  GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
+
+  try {
+    var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+
+    if (decoded.loggedIn == true) {
+      SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, count(publications.ID_publication) AS nb_publi
+      FROM blogs
+      INNER JOIN users ON blogs.User_ID = users.ID_user
+      INNER JOIN publications ON blogs.ID_blog = publications.Blog_ID
+      GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
+    }
+  } catch (error) {}
+
+  connection.query(SQLquery, async (err, results, fields) => {
+    console.log("RESULTAT : ", results);
     if (results.length != 0) {
       res.send({
         blogs: results,
@@ -440,8 +474,6 @@ app.get("/qrcode/:user", (req, res) => {
       });
       return;
     }
-
-    console.log("Image : ", imageUrl);
 
     res.send({
       //status: "Success",

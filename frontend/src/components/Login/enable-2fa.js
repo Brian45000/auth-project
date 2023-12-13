@@ -4,7 +4,7 @@ import axios from "axios";
 import { Link, useLocation } from "react-router-dom";
 import "../../assets/formStyle.css";
 import NavBar from "../NavBar";
-
+import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -18,11 +18,21 @@ function Enable2faForm() {
 
   // Utilisez get pour récupérer la valeur d'un paramètre spécifique
   const emailUser = searchParams.get("email");
+  const [cookies, setCookie] = useCookies(["tokenJWT"]);
 
   const [code, setCode] = useState("");
   const [imageQRCode, setImageQRCode] = useState("");
 
   useEffect(() => {
+    try {
+      const tokenJWT = searchParams.get("tokenJWT");
+      if (tokenJWT) {
+        setCookie("tokenJWT", tokenJWT, { path: "/" });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+
     const getQrCode = async () => {
       await axios
         .get(`http://localhost:5000/qrcode/${emailUser}`)
@@ -44,8 +54,8 @@ function Enable2faForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sendLogin = async () => {
-      const data = [code, emailUser];
-      const columnNames = ["token", "emailUser"];
+      const data = [code, emailUser, cookies];
+      const columnNames = ["token", "emailUser", "tokenJWT"];
 
       const jsonData = [
         data.reduce((obj, val, i) => {

@@ -113,6 +113,16 @@ la génération du QRCode se fera par rapport à l'email de l'utilisateur connec
 # Maintien de la connexion
 
 Mise en place d'un JWT,
+var tokenJWT = jwt.sign(
+{
+iss: "http://localhost",
+loggedIn: ,
+doubleAuthent: ,
+email: ,
+username: ,
+},
+process.env.SECRET_KEY_JWT
+);
 
 # Déconnexion
 
