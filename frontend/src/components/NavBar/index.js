@@ -63,9 +63,6 @@ function NavBar() {
             <button className="dropbtn">Mes espaces 👇</button>
             <div className="dropdown-content">
               <Link to={"/2fa"}>Créer un espace ➕</Link>
-              <Link to={"/qrcode"}>Ajouter une publication ➕</Link>
-              <Link to={"/logout"}>Modifier une publication ✏️</Link>
-              <Link to={"/logout"}>Supprimer une publication ❌</Link>
             </div>
           </li>
         )}
@@ -76,7 +73,17 @@ function NavBar() {
               {!doubleAuth && (
                 <>
                   <Link to={"/verify"}>Activer mon accès Admin 🔑</Link>
-                  <Link to={"/qrcode/" + email}>Mon QRCode 🖼️</Link>
+
+                  <Link
+                    to={
+                      "/enable-2fa?email=" +
+                      email +
+                      "&tokenJWT=" +
+                      cookies["tokenJWT"]
+                    }
+                  >
+                    Mon QRCode 🖼️
+                  </Link>
                 </>
               )}
               <button className="btn-logout" onClick={() => handleLogout()}>

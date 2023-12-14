@@ -1,0 +1,23 @@
+  .InfoUser {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 1em rgba(0, 0, 0, 0.25);
+    padding: 20px;
+    margin: 20px auto; /* Marge en haut et en bas à 20px, centré horizontalement */
+    width: 50%; /* Largeur du bloc à 50% de la page */
+  }
+  
+  .InfoUser h2 {
+    font-size: 1.5em;
+    margin-bottom: 15px;
+  }
+  
+  .InfoUser p {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+  }
+  
+  .InfoUser span {
+    font-weight: bold;
+  }
+  

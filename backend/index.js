@@ -95,22 +95,23 @@ async function verifyAndAddUser(userData) {
       console.log("Connecté à la base de données MySQL");
     });
 
-    var tokenJWT = jwt.sign(
-      {
-        iss: "http://localhost",
-        loggedIn: true,
-        doubleAuthent: false,
-        email: userData.email,
-        username: userData.username,
-      },
-      process.env.SECRET_KEY_JWT
-    );
-
     connection.query(
       `SELECT * FROM users WHERE email = '${userData.email}'`,
       async (err, results, fields) => {
         if (results.length === 1) {
           connection.end();
+
+          var tokenJWT = jwt.sign(
+            {
+              iss: "http://localhost",
+              loggedIn: true,
+              doubleAuthent: false,
+              email: userData.email,
+              username: userData.username,
+              ID_user: results[0]["ID_user"],
+            },
+            process.env.SECRET_KEY_JWT
+          );
 
           if (results[0]["2faIsActivated"] === 1) {
             resolve(`http://localhost:3000/verify?tokenJWT=${tokenJWT}`);
@@ -139,6 +140,18 @@ async function verifyAndAddUser(userData) {
               console.log(
                 "Nouvelle ligne insérée avec succès. ID de la nouvelle ligne :",
                 results.insertId
+              );
+
+              var tokenJWT = jwt.sign(
+                {
+                  iss: "http://localhost",
+                  loggedIn: true,
+                  doubleAuthent: false,
+                  email: userData.email,
+                  username: userData.username,
+                  ID_user: results.insertId,
+                },
+                process.env.SECRET_KEY_JWT
               );
 
               connection.end();
@@ -344,6 +357,7 @@ app.post("/login", async (req, res) => {
               doubleAuthent: false,
               email: identifiant,
               username: results[0]["Username"],
+              ID_user: results[0]["ID_user"],
             },
             process.env.SECRET_KEY_JWT
           );
@@ -371,6 +385,7 @@ app.post("/login", async (req, res) => {
     }
   );
 });
+
 // Route pour récupérer l'intégralité des blogs
 app.post("/blogs", (req, res) => {
   const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
@@ -416,11 +431,61 @@ app.post("/blogs", (req, res) => {
   });
 });
 
+// Route pour récupérer l'intégralité de ses blogs
+app.post("/blogs-dashboard", (req, res) => {
+  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+  let SQLquery;
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  try {
+    var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+
+    if (decoded.loggedIn && decoded.doubleAuthent) {
+      SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, blogs.User_ID, count(publications.ID_publication) AS nb_publi
+      FROM blogs
+      INNER JOIN users ON blogs.User_ID = users.ID_user
+      INNER JOIN publications ON blogs.ID_blog = publications.Blog_ID
+      WHERE blogs.User_ID = ${decoded.ID_user}
+      GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
+    } else {
+      // Faire une redirection vers /login
+    }
+  } catch (error) {}
+
+  connection.query(SQLquery, async (err, results, fields) => {
+    if (results.length != 0) {
+      res.send({
+        blogs: results,
+      });
+    } else {
+      res.send({
+        status: "Error",
+        message: "echec envoi des blogs",
+      });
+    }
+  });
+});
+
 // Route pour récupérer l'intégralité des blogs
 app.post("/publications", (req, res) => {
   const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   let id_blog = req.body[0].id_blog;
+
+  // On vérifie si le token existe, si il n'existe pas alors la variable doubleAuthent est forcement à false
+  let doubleAuthent;
+  if (tokenJWT) {
+    var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+    doubleAuthent = decoded.doubleAuthent;
+  } else {
+    doubleAuthent = false;
+  }
 
   let SQLquery;
   const connection = mysql.createConnection({
@@ -430,7 +495,7 @@ app.post("/publications", (req, res) => {
     database: process.env.DATABASE_MYSQL,
   });
 
-  SQLquery = `SELECT publications.ID_publication, publications.Title, publications.Date_creation, publications.Description, publications.Blog_ID, publications.User_ID, blogs.Title as nom_blog, users.FullName 
+  SQLquery = `SELECT publications.ID_publication as id_publication, publications.Title, publications.Date_creation, publications.Description, publications.Blog_ID, publications.User_ID, blogs.Title as nom_blog, users.FullName, users.ID_User as id_user
   FROM publications 
   INNER JOIN blogs ON publications.Blog_ID = blogs.ID_blog
   INNER JOIN users ON publications.User_ID = users.ID_User
@@ -439,13 +504,97 @@ app.post("/publications", (req, res) => {
   connection.query(SQLquery, async (err, results, fields) => {
     if (results.length != 0) {
       res.send({
+        status: "Success",
         publications: results,
         nom_blog: results[0]["nom_blog"],
+        id_user: results[0]["id_user"],
+        doubleAuthent: doubleAuthent,
       });
     } else {
       res.send({
         status: "Error",
-        message: "echec envoi des blogs",
+        message: "echec envoi des publications",
+      });
+    }
+  });
+});
+
+app.post("/delete-publication", (req, res) => {
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  id_publication = req.body[0].id_publication;
+  SQLquery = `DELETE FROM publications WHERE ID_publication = ${id_publication}`;
+  connection.query(SQLquery, async (err, results, fields) => {
+    res.send({
+      status: "Success",
+      message: "Publication supprimée avec succès",
+    });
+  });
+});
+
+app.post("/add-publication", (req, res) => {
+  const newTitle = req.body[0]["newTitle"];
+  const newDescription = req.body[0]["newDescription"];
+  const userID = req.body[0]["userID"];
+  const currentDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const blogID = req.body[0]["blogID"];
+
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  const SQLquery = `INSERT INTO publications (Title, Description, User_ID, date_creation, Blog_ID) VALUES ('${newTitle}', '${newDescription}', ${userID}, '${currentDate}', ${blogID})`;
+
+  connection.query(SQLquery, (err, results, fields) => {
+    if (!err) {
+      res.send({
+        status: "Success",
+        message: "Publication ajoutée avec succès",
+      });
+    } else {
+      console.error("Erreur lors de l'insertion de la publication :", err);
+      res.send({
+        status: "Error",
+        message: "Échec de l'ajout de la publication",
+      });
+    }
+  });
+});
+
+// Route pour mettre à jour une publication
+app.post("/edit-publication", (req, res) => {
+  let newTitle = req.body[0]["newTitle"];
+  let newDescription = req.body[0]["newDescription"];
+  let id_publication = req.body[0]["id_publication"];
+
+  let SQLquery;
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  SQLquery = `UPDATE publications SET Title = '${newTitle}', Description = '${newDescription}' WHERE ID_publication = ${id_publication}`;
+
+  connection.query(SQLquery, async (err, results, fields) => {
+    if (results.length != 0) {
+      res.send({
+        status: "Success",
+        message: "Modification effectué avec succès ",
+      });
+    } else {
+      res.send({
+        status: "Error",
+        message: "echec de la modification",
       });
     }
   });
@@ -627,6 +776,8 @@ app.post("/get-cookies", (req, res) => {
       loggedIn: loggedIn,
       doubleAuthent: doubleAuthent,
       email: decoded.email,
+      username: decoded.username,
+      ID_user: decoded.ID_user,
     });
   } else {
     res.send({
@@ -637,6 +788,7 @@ app.post("/get-cookies", (req, res) => {
     });
   }
 });
+
 app.listen(5000, () => {
   console.log("listening");
 });

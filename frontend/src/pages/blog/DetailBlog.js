@@ -1,10 +1,12 @@
 //import "./styles.css";
-import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, us } from "react-router-dom";
 import NavBar from "../../components/NavBar";
 import axios from "axios";
 import Publication from "../../components/Publication";
 import { useCookies } from "react-cookie";
+import { ToastContainer, toast } from "react-toastify";
+import { user } from "../../features/user";
 
 function formattedDate(dateToFormate) {
   const dateOriginale = new Date(dateToFormate);
@@ -32,12 +34,59 @@ function DetailBlog() {
 
   const [publications, setPublications] = useState();
   const [nom_blog, setNomBlog] = useState("");
+  const [ID_User, setID_User] = useState("");
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
+  const [doubleAuth, setDoubleAuth] = useState(false);
+  const [IsMonBlog, setIsMonBlog] = useState(false);
+  const [countPublications, setCountPublications] = useState(0);
+  const [IsAddPubli, SetIsAddPubli] = useState(false);
+
+  const [values, setValues] = React.useState({
+    newTitle: "",
+    newDescription: "",
+  });
+  const handleChange = (prop) => (event) => {
+    setValues({ ...values, [prop]: event.target.value });
+  };
+
+  const handleSubmitAdd = async (e) => {
+    try {
+      const sendAdd = async () => {
+        const data = [values.newTitle, values.newDescription, ID_User, id_blog];
+        const columnNames = ["newTitle", "newDescription", "userID", "blogID"];
+
+        const jsonData = [
+          data.reduce((obj, val, i) => {
+            obj[columnNames[i]] = val;
+            return obj;
+          }, {}),
+        ];
+
+        await axios
+          .post(
+            "http://localhost:5000/add-publication",
+            JSON.stringify(jsonData),
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          )
+          .then((res) => {
+            if (res.data.status === "Success") {
+              SetIsAddPubli(false);
+              window.location.reload();
+            }
+          });
+      };
+      sendAdd();
+    } catch (e) {}
+  };
 
   useEffect(() => {
     const getBlog = async () => {
-      const data = [id_blog, cookies];
-      const columnNames = ["id_blog", "tokenJWT"];
+      const data = [id_blog, cookies, ID_User];
+      const columnNames = ["id_blog", "tokenJWT", "id_user"];
 
       const jsonData = [
         data.reduce((obj, val, i) => {
@@ -53,21 +102,109 @@ function DetailBlog() {
           },
         })
         .then((res) => {
-          setPublications(res.data.publications);
-          setNomBlog(res.data.nom_blog);
+          if (res.data.status === "Success") {
+            toast.success(res.data.message);
+            setPublications(res.data.publications);
+            setNomBlog(res.data.nom_blog);
+            setID_User(res.data.id_user);
+            setCountPublications(res.data.publications.length);
+          } else {
+            toast.error(res.data.message);
+          }
         });
     };
     getBlog();
-  }, [cookies]);
+
+    const getCookies = async () => {
+      const data = [cookies];
+      const columnNames = ["tokenJWT", "BlogUserId"];
+
+      const jsonData = [
+        data.reduce((obj, val, i) => {
+          obj[columnNames[i]] = val;
+          return obj;
+        }, {}),
+      ];
+
+      await axios
+        .post("http://localhost:5000/get-cookies", JSON.stringify(jsonData), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        .then((res) => {
+          setDoubleAuth(res.data.doubleAuthent);
+          if (res.data.ID_user === ID_User) {
+            setIsMonBlog(true);
+          } else {
+            setIsMonBlog(false);
+          }
+        });
+    };
+    if (cookies) getCookies();
+  }, [cookies, ID_User, id_blog, countPublications]);
 
   return (
     <div style={{ width: "100%" }}>
       <NavBar />
+      <aside>
+        <ToastContainer />
+      </aside>
       <h2 className="titleH2">
-        Liste des des publications du blog : {nom_blog}
+        Liste des des publications de "{nom_blog} "
+        {doubleAuth && IsMonBlog && (
+          <>
+            <button
+              onClick={() => SetIsAddPubli(true)}
+              className="detail-button"
+            >
+              Ajouter une publication ➕
+            </button>
+          </>
+        )}
       </h2>
+
       {publications && (
         <div className="publication-container">
+          {IsAddPubli && (
+            <div className="publication-card">
+              <form>
+                <div>
+                  <label htmlFor="newTitle">Titre :</label>
+                  <input
+                    type="text"
+                    id="newTitle"
+                    value={values.newTitle}
+                    onChange={handleChange("newTitle")}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newDescription">Description :</label>
+                  <textarea
+                    id="newDescription"
+                    value={values.newDescription}
+                    onChange={handleChange("newDescription")}
+                    rows="5"
+                    cols="41"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSubmitAdd()}
+                  className="detail-button"
+                >
+                  Enregistrer✏️
+                </button>
+                <button
+                  onClick={() => SetIsAddPubli(false)}
+                  className="delete-button"
+                >
+                  Annuler ❌
+                </button>
+              </form>
+            </div>
+          )}
+
           {publications?.map((publication) => (
             <Publication
               key={publication.ID_publication}
@@ -75,6 +212,11 @@ function DetailBlog() {
               date_creation={formattedDate(publication.Date_creation)}
               description={publication.Description}
               user_fullname={publication.FullName}
+              user_idblog={ID_User}
+              doubleAuth={doubleAuth}
+              IsMonBlog={IsMonBlog}
+              id_publication={publication.id_publication}
+              id_blog={id_blog}
             />
           ))}
         </div>

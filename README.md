@@ -1,6 +1,6 @@
 # Installation :
 
-## Script SQL
+## Script SQL à importer
 
 ```sql
 -- Création de la table Users
@@ -34,6 +34,14 @@ CREATE TABLE Publications (
   FOREIGN KEY (Blog_ID) REFERENCES Blogs(ID_blog)
 );
 
+-- Création de la table UserJWT
+CREATE TABLE UserJWT (
+  User_ID INT,
+  JWT TEXT,
+  CONSTRAINT FK_UserID FOREIGN KEY (User_ID) REFERENCES Users(ID_user)
+);
+
+
 -- Insertion de données dans la table Users
 INSERT INTO Users (FullName, Email, Username, Password, 2faIsActivated) VALUES
   ('Alice Dupont', 'alice@example.com', 'alice123', '$2b$10$S/Fy0WYR4tusswl6A/xtfe1y4lVCLXt9P8HJrZe6P5VO1bfhV60eO', 1), -- Password
@@ -57,33 +65,6 @@ INSERT INTO Publications (Title, Date_creation, Description, Blog_ID, User_ID) V
 
 ```
 
-# Structure de données :
-
-## Blogs
-
-- ID_blog : autoincrement
-- Title : text
-- Access : Public/Private
-- User_ID : users
-
-## Publications
-
-- ID_publication : autoincrement
-- Title : text
-- Date_creation : Datetime
-- Description : text
-- Blog_ID : Blogs
-- User_ID : Users
-
-## Users
-
-- ID_user = autoincrement
-- FullName = text
-- Email = text
-- Username = text
-- Password = text ( hash )
-- type = text
-
 # Inscription
 
 Un utilisateur peut s'enregistrer sur l'application en renseignant :
@@ -106,9 +87,10 @@ L'application permet de se connecter directement avec Google et Microsoft, elle 
 
 # Two-Factor Authentification
 
-L'utilisateur une fois connecté recoit une notification comme quoi il peut s'authentifier en double facteur en passant dans "Mon compte" : " TFA Form " puis saisi son code.
-Il peut également générer son QRCode dans le menu "Mon Compte" et "Mon QRCode"
-la génération du QRCode se fera par rapport à l'email de l'utilisateur connecté.
+L'utilisateur une fois connecté accède à la page pour l'authentification à deux facteurs, il n'est pas obligé de la faire.
+Il peut également activer son authentification à deux facteurs en passant dans "Mon compte" > "Mon QRCode"
+Il faudrait cacher le menu "Mon QrCode" si l'utilisateur à activer l'authentification à deux facteurs sur son compte. (BD User.2faIsActivated == 1 )
+Ou simplement activer son accès administrateur depuis le menu "Mon compte"
 
 # Maintien de la connexion
 
@@ -120,6 +102,7 @@ loggedIn: ,
 doubleAuthent: ,
 email: ,
 username: ,
+ID_user: ,
 },
 process.env.SECRET_KEY_JWT
 );
@@ -149,3 +132,13 @@ Suppression du tokenJWT
 - /addPublication : Permet d'ajouter une publication
 - /updatePublication/:id : Permet de modifier une publication
 - /deletePublication/:id : Permet de supprimer une publication
+
+# INSTALLER LE PROJET
+
+./backend --> npm i
+./frontend --> npm i
+
+# DEMARRER LE PROJET
+
+./backend --> nodemon index.js
+./frontend --> npm start
