@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Link, useLocation } from "react-router-dom";
 import "../../assets/formStyle.css";
-import NavBar from "../NavBar";
+import NavBar from "../../components/NavBar";
 import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-function Enable2faForm() {
+function TfaForm() {
   const navigate = useNavigate();
+
   // Utilisez useLocation pour obtenir l'objet location
   const location = useLocation();
 
@@ -17,35 +18,15 @@ function Enable2faForm() {
   const searchParams = new URLSearchParams(location.search);
 
   // Utilisez get pour récupérer la valeur d'un paramètre spécifique
-  const emailUser = searchParams.get("email");
+  let tokenJWT = searchParams.get("tokenJWT");
+
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
 
+  if (tokenJWT) {
+    setCookie("tokenJWT", tokenJWT, { path: "/" });
+  }
+
   const [code, setCode] = useState("");
-  const [imageQRCode, setImageQRCode] = useState("");
-
-  useEffect(() => {
-    try {
-      const tokenJWT = searchParams.get("tokenJWT");
-      if (tokenJWT) {
-        setCookie("tokenJWT", tokenJWT, { path: "/" });
-      }
-    } catch (error) {
-      console.log(error);
-    }
-
-    const getQrCode = async () => {
-      await axios
-        .get(`http://localhost:5000/qrcode/${emailUser}`)
-        .then((res) => {
-          if (res.data.status === "Error") {
-            toast.error(res.data.message);
-          } else {
-            setImageQRCode(res.data.qrcode);
-          }
-        });
-    };
-    getQrCode();
-  }, []);
 
   const handleCodeChange = (e) => {
     setCode(e.target.value);
@@ -54,8 +35,8 @@ function Enable2faForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sendLogin = async () => {
-      const data = [code, emailUser, cookies];
-      const columnNames = ["token", "emailUser", "tokenJWT"];
+      const data = [code, cookies];
+      const columnNames = ["token", "tokenJWT"];
 
       const jsonData = [
         data.reduce((obj, val, i) => {
@@ -65,7 +46,7 @@ function Enable2faForm() {
       ];
 
       await axios
-        .post("http://localhost:5000/enable-2fa", JSON.stringify(jsonData), {
+        .post("http://localhost:5000/verify", JSON.stringify(jsonData), {
           headers: {
             "Content-Type": "application/json",
           },
@@ -75,7 +56,8 @@ function Enable2faForm() {
             toast.error(res.data.message);
           } else {
             toast.success(res.data.message);
-            navigate("/home");
+            setCookie("tokenJWT", res.data.tokenJWT, { path: "/" });
+            setTimeout(navigate("/home"), 5000);
           }
         });
     };
@@ -97,15 +79,7 @@ function Enable2faForm() {
           method="post"
           onSubmit={handleSubmit}
         >
-          <label for="authCode">
-            Voulez vous activer l'Authentification à Deux Facteurs:
-          </label>
-
-          {imageQRCode && (
-            <div dangerouslySetInnerHTML={{ __html: imageQRCode }} />
-          )}
-
-          <label for="authCode">Saisir le code:</label>
+          <label for="authCode">Code d'Authentification à Deux Facteurs:</label>
           <input
             type="text"
             id="authCode"
@@ -126,4 +100,4 @@ function Enable2faForm() {
   );
 }
 
-export default Enable2faForm;
+export default TfaForm;

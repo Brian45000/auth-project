@@ -126,8 +126,8 @@ process.env.SECRET_KEY_JWT
 
 # Déconnexion
 
-EN ATTENTE
-L'utilisateur peut se déconnecter depuis l'application dans l'onglet "Mon Compte" mais il pourra également se déconnecter de tout les équipements depuis l'onglet "Mon Compte"
+L'utilisateur peut se déconnecter depuis l'application dans l'onglet "Mon Compte"
+Suppression du tokenJWT
 
 # Liste des routes :
 

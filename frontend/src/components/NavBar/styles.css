@@ -29,6 +29,9 @@
     color: black;
 }
 
+.titleH2{
+  padding: 0 0 0 2em !important;;
+}
 
 .dropdown {
     display: inline-block;
@@ -48,7 +51,7 @@
     color: black;
   }
   
-  .dropdown-content {
+  .dropdown-content{
     display: none;
     position: absolute;
     background-color: #f9f9f9;
@@ -56,18 +59,27 @@
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1;
   }
+
+  .btn-logout{
+    background-color: #f9f9f9 !important;
+    margin:0 !important;
+    width: 100% !important;
+  }
   
-  .dropdown-content a {
+  .dropdown-content a,
+  .dropdown-content .btn-logout {
     color: black;
-    padding: 12px 16px;
+    padding: 12px 16px !important;
     text-decoration: none;
     display: block;
   }
   
-  .dropdown-content a:hover {
-    background-color: #ddd;
+  .dropdown-content a:hover,
+  .dropdown-content .btn-logout:hover {
+    background-color: #ddd !important;
   }
   
   .dropdown:hover .dropdown-content {
     display: block;
   } 
+

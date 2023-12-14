@@ -10,8 +10,8 @@ function Blog(props) {
       <p className="blog-access">Accès : {access}</p>
       <p className="blog-created-by">Créé par : {name}</p>
       <p className="num-publications">Publications : {nb_publi}</p>
-      <Link to={`/blog/${id}`}>
-        <button className="detail-button">Parcourir</button>
+      <Link to={`/blog?id=${id}`}>
+        <button className="detail-button">Parcourir ▶️</button>
       </Link>
     </div>
   );

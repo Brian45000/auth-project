@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import NavBar from "./NavBar";
+import NavBar from "../components/NavBar";
 import axios from "axios";
-import Blog from "./blog/blog";
+import Blog from "../components/blog";
 import { useCookies } from "react-cookie";
 
 export async function data_axios(url) {
@@ -17,10 +17,6 @@ function Home() {
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
 
   useEffect(() => {
-    /*data_axios("http://localhost:5000/blogs").then((res) => {
-      //console.log(res);
-      setBlogs(res);
-    });*/
     const getBlogs = async () => {
       const data = [cookies];
       const columnNames = ["tokenJWT"];
@@ -43,18 +39,17 @@ function Home() {
         });
     };
     getBlogs();
-  }, []);
-  //console.log(Blog);
-  // const navigate = useNavigate();*/
+  }, [cookies]);
 
   return (
     <div style={{ width: "100%" }}>
       <NavBar />
-      <h2>Liste des blogs : </h2>
+      <h2 className="titleH2">Liste des blogs : </h2>
       {blogs && (
         <div className="blog-container">
           {blogs?.map((blog) => (
             <Blog
+              id={blog.ID_blog}
               title={blog.Title}
               access={blog.Access}
               key={blog.ID_blog}

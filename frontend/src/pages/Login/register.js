@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import "../../assets/formStyle.css";
-import NavBar from "../NavBar";
+import NavBar from "../../components/NavBar";
 
 function Register() {
   const [values, setValues] = React.useState({
@@ -42,9 +42,7 @@ function Register() {
               "Content-Type": "application/json",
             },
           })
-          .then((res) => {
-            console.log("OK");
-          });
+          .then((res) => {});
       };
       sendRegister();
     } catch (e) {}

@@ -189,8 +189,6 @@ app.get(
   "/auth/github/callback",
   passport.authenticate("github", { failureRedirect: "/login" }),
   async (req, res) => {
-    console.log(req.user);
-
     userDataGitHub = {
       name: req.user.displayName,
       email: req.user.emails[0].value,
@@ -206,12 +204,6 @@ app.get(
     }
   }
 );
-
-// Route de déconnexion
-app.get("/logout", (req, res) => {
-  req.logout();
-  res.redirect("/");
-});
 
 // Route protégée
 app.get("/profile", (req, res) => {
@@ -341,7 +333,6 @@ app.post("/login", async (req, res) => {
         const isPasswordValid = await bcrypt.compare(mdp, passwordHash);
         if (isPasswordValid) {
           // Alors c'est bon.
-          console.log("C'est bon.");
 
           checkIf2faIsActivated = results[0]["2faIsActivated"];
 
@@ -366,16 +357,12 @@ app.post("/login", async (req, res) => {
             tokenJWT: tokenJWT,
           });
         } else {
-          console.log("Pas bon compte");
-
           res.send({
             status: "Error",
             message: "Connexion échouée",
           });
         }
       } else {
-        console.log("Pas bon compte");
-
         res.send({
           status: "Error",
           message: "Connexion échouée",
@@ -416,10 +403,44 @@ app.post("/blogs", (req, res) => {
   } catch (error) {}
 
   connection.query(SQLquery, async (err, results, fields) => {
-    console.log("RESULTAT : ", results);
     if (results.length != 0) {
       res.send({
         blogs: results,
+      });
+    } else {
+      res.send({
+        status: "Error",
+        message: "echec envoi des blogs",
+      });
+    }
+  });
+});
+
+// Route pour récupérer l'intégralité des blogs
+app.post("/publications", (req, res) => {
+  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+  let id_blog = req.body[0].id_blog;
+
+  let SQLquery;
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  SQLquery = `SELECT publications.ID_publication, publications.Title, publications.Date_creation, publications.Description, publications.Blog_ID, publications.User_ID, blogs.Title as nom_blog, users.FullName 
+  FROM publications 
+  INNER JOIN blogs ON publications.Blog_ID = blogs.ID_blog
+  INNER JOIN users ON publications.User_ID = users.ID_User
+  WHERE Blog_ID = ${id_blog}`;
+
+  connection.query(SQLquery, async (err, results, fields) => {
+    if (results.length != 0) {
+      res.send({
+        publications: results,
+        nom_blog: results[0]["nom_blog"],
       });
     } else {
       res.send({
@@ -467,7 +488,6 @@ app.get("/qrcode/:user", (req, res) => {
 
   qrcode.toDataURL(otpauth, (err, imageUrl) => {
     if (err) {
-      console.log("Error with QR");
       res.status(500).send({
         status: "Error",
         message: "Internal Server Error",
@@ -492,7 +512,6 @@ app.post("/verify", (req, res) => {
   try {
     // Si la personne n'a pas saisi le token, c'est non
     if (!token) {
-      console.log("PAS DE TOKEN");
       res.send({
         status: "Error",
         message: "Veuillez saisir un code ! ",
@@ -518,7 +537,6 @@ app.post("/verify", (req, res) => {
           tokenJWT: tokenJWT,
         });
       } catch (error) {
-        console.log(error);
         res.send({
           status: "Error",
           message: error.message,
@@ -545,7 +563,6 @@ app.post("/enable-2fa", (req, res) => {
   try {
     // Si la personne n'a pas saisi le token, c'est non
     if (!token) {
-      console.log("PAS DE TOKEN");
       res.send({
         status: "Error",
         message: "Veuillez saisir un code ! ",
@@ -598,6 +615,28 @@ app.post("/enable-2fa", (req, res) => {
   }
 });
 
+app.post("/get-cookies", (req, res) => {
+  if (req.body[0].tokenJWT.tokenJWT) {
+    let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+    var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+    decoded.doubleAuthent;
+    const loggedIn = decoded.loggedIn;
+    const doubleAuthent = decoded.doubleAuthent;
+    res.send({
+      status: "Success",
+      loggedIn: loggedIn,
+      doubleAuthent: doubleAuthent,
+      email: decoded.email,
+    });
+  } else {
+    res.send({
+      status: "Error",
+      loggedIn: false,
+      doubleAuthent: false,
+      email: false,
+    });
+  }
+});
 app.listen(5000, () => {
   console.log("listening");
 });
