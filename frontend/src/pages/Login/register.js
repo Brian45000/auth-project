@@ -9,6 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 function Register() {
   const navigate = useNavigate();
+  // declaration du state pour stocker dynamiquement les valeurs enregistrés
   const [values, setValues] = React.useState({
     fullname: "",
     email: "",
@@ -24,6 +25,7 @@ function Register() {
     e.preventDefault();
 
     try {
+      // on n'envoi
       const sendRegister = async () => {
         const data = [
           values.fullname,
@@ -83,7 +85,7 @@ function Register() {
           method="post"
           onSubmit={handleSubmit}
         >
-          <label for="fullname">Nom Complet :</label>
+          <label htmlFor="fullname">Nom Complet :</label>
           <input
             type="text"
             id="fullname"
@@ -94,7 +96,7 @@ function Register() {
             required
           />
 
-          <label for="email">Adresse Email :</label>
+          <label htmlFor="email">Adresse Email :</label>
           <input
             type="email"
             id="email"
@@ -105,7 +107,7 @@ function Register() {
             required
           />
 
-          <label for="newUsername">Identifiant :</label>
+          <label htmlFor="newUsername">Identifiant :</label>
           <input
             type="text"
             id="newUsername"
@@ -116,7 +118,7 @@ function Register() {
             required
           />
 
-          <label for="newPassword">Mot de passe :</label>
+          <label htmlFor="newPassword">Mot de passe :</label>
           <input
             type="password"
             id="newPassword"
@@ -127,10 +129,10 @@ function Register() {
             required
           />
 
-          <button type="submit">S'inscrire</button>
+          <button type="submit">S'inscrire ✔️</button>
 
           <button type="button" className="btn-retour">
-            <Link to="/login">Retour</Link>
+            <Link to="/login">Retour ❌</Link>
           </button>
         </form>
         <button className="btn-google" onClick={registerWithGoogle}>

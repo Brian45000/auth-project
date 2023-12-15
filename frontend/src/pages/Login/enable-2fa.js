@@ -24,6 +24,9 @@ function Enable2faForm() {
   const [imageQRCode, setImageQRCode] = useState("");
   const [secretKey, setsecretKey] = useState("");
 
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [doubleAuth, setDoubleAuth] = useState(false);
+
   useEffect(() => {
     try {
       const tokenJWT = searchParams.get("tokenJWT");
@@ -33,6 +36,34 @@ function Enable2faForm() {
     } catch (error) {
       console.log(error);
     }
+
+    const getCookies = async () => {
+      const data = [cookies];
+      const columnNames = ["tokenJWT"];
+
+      const jsonData = [
+        data.reduce((obj, val, i) => {
+          obj[columnNames[i]] = val;
+          return obj;
+        }, {}),
+      ];
+
+      await axios
+        .post("http://localhost:5000/get-cookies", JSON.stringify(jsonData), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        .then((res) => {
+          setDoubleAuth(res.data.doubleAuthent);
+          setLoggedIn(res.data.loggedIn);
+
+          if (!loggedIn) {
+            navigate("/home");
+          }
+        });
+    };
+    getCookies();
 
     const getQrCode = async () => {
       await axios
@@ -118,9 +149,9 @@ function Enable2faForm() {
             required
           />
 
-          <button type="submit">Valider le Code</button>
+          <button type="submit">Valider le Code ✔️</button>
           <button type="button" className="btn-retour">
-            <Link to="/home">Pas pour le moment</Link>
+            <Link to="/home">Pas pour le moment ▶️</Link>
           </button>
         </form>
       </div>

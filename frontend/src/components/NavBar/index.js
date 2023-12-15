@@ -2,16 +2,14 @@ import "./styles.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { user_info } from "../../store/selector";
-import { useSelector } from "react-redux";
 import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import axios from "axios";
 
 function NavBar() {
-  let user = useSelector(user_info);
   const navigate = useNavigate();
 
+  // on nomme nos Etats reacts
   const [cookies, setCookie, removeCookie] = useCookies(["tokenJWT"]);
   const [loggedIn, setLoggedIn] = useState(false);
   const [doubleAuth, setDoubleAuth] = useState(false);
@@ -19,6 +17,7 @@ function NavBar() {
   const [secretKeyExist, setSecretKeyExist] = useState();
 
   useEffect(() => {
+    // on recupere le token JWT qui est stocké dans le cookie
     const getcheckToken = async () => {
       const data = [cookies];
       const columnNames = ["tokenJWT"];
@@ -35,15 +34,7 @@ function NavBar() {
             "Content-Type": "application/json",
           },
         })
-        .then((res) => {
-          if (res.data.status === "Error") {
-            if (cookies["tokenJWT"]) {
-              toast.error(res.data.message);
-              removeCookie(["tokenJWT"]);
-              navigate("/home");
-            }
-          }
-        });
+        .then((res) => {});
     };
     getcheckToken();
 

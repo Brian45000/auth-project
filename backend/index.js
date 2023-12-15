@@ -3,9 +3,7 @@ const cors = require("cors");
 const mysql = require("mysql");
 const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
-const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
 
 require("dotenv").config();
 
@@ -184,6 +182,7 @@ app.get(
   })
 );
 
+// Route callback Google
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
@@ -227,14 +226,6 @@ app.get(
     }
   }
 );
-
-// Route protégée
-app.get("/profile", (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.redirect("/");
-  }
-  res.json(req.user);
-});
 
 // Chemin register "secret"
 app.post("/register", async (req, res) => {
@@ -380,6 +371,7 @@ app.post("/blogs", (req, res) => {
   try {
     var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
 
+    // Si l'utilisateur est connecté alors il récupère la totalité des blogs
     if (decoded.loggedIn == true) {
       SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, COALESCE(count(publications.ID_publication), 0) AS nb_publi
       FROM blogs
@@ -412,47 +404,50 @@ app.post("/blogs", (req, res) => {
   });
 });
 
-// Route pour récupérer l'intégralité de ses blogs
+// Route pour récupérer l'intégralité de SES blogs
 app.post("/blogs-dashboard", async (req, res) => {
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   let SQLquery;
-  var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
-  const authenticatorSecret = await getSecretKeyById(decoded.ID_user);
   try {
-    var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+    if (tokenJWT) {
+      var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
 
-    if (decoded.loggedIn && decoded.doubleAuthent) {
-      SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, blogs.User_ID
-      FROM blogs
-      INNER JOIN users ON blogs.User_ID = users.ID_user
-      WHERE blogs.User_ID = ${decoded.ID_user}
-      GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
-    } else {
-      // Faire une redirection vers /login
+      if (decoded.loggedIn && decoded.doubleAuthent) {
+        SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, blogs.User_ID
+        FROM blogs
+        INNER JOIN users ON blogs.User_ID = users.ID_user
+        WHERE blogs.User_ID = ${decoded.ID_user}
+        GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
+
+        const connection = mysql.createConnection({
+          host: process.env.HOST_MYSQL,
+          user: process.env.USERNAME_MYSQL,
+          password: process.env.PASSWORD_MYSQL,
+          database: process.env.DATABASE_MYSQL,
+        });
+
+        connection.query(SQLquery, async (err, results, fields) => {
+          if (results.length != 0) {
+            connection.end();
+            res.send({
+              blogs: results,
+            });
+          } else {
+            connection.end();
+            res.send({
+              status: "Error",
+              message: "echec envoi des blogs",
+            });
+          }
+        });
+      } else {
+        res.send({
+          status: "Error",
+          message: "Veuillez vous reconnecter ! ",
+        });
+      }
     }
   } catch (error) {}
-
-  const connection = mysql.createConnection({
-    host: process.env.HOST_MYSQL,
-    user: process.env.USERNAME_MYSQL,
-    password: process.env.PASSWORD_MYSQL,
-    database: process.env.DATABASE_MYSQL,
-  });
-
-  connection.query(SQLquery, async (err, results, fields) => {
-    if (results.length != 0) {
-      connection.end();
-      res.send({
-        blogs: results,
-      });
-    } else {
-      connection.end();
-      res.send({
-        status: "Error",
-        message: "echec envoi des blogs",
-      });
-    }
-  });
 });
 
 // Route pour récupérer l'intégralité des blogs
@@ -486,16 +481,23 @@ app.post("/publications", (req, res) => {
 
   connection.query(SQLquery, async (err, results, fields) => {
     if (results.length != 0) {
-      connection.end();
-      res.send({
-        status: "Success",
-        publications: results,
-        nom_blog: results[0]["nom_blog"],
-        id_user: results[0]["id_user"],
-        doubleAuthent: doubleAuthent,
-      });
+      SQLquery = `SELECT Access FROM blogs WHERE ID_blog = ${id_blog}`;
+      connection.query(
+        SQLquery,
+        async (errAccess, resultsAccess, fieldsAccess) => {
+          connection.end();
+          res.send({
+            status: "Success",
+            publications: results,
+            nom_blog: results[0]["nom_blog"],
+            id_user: results[0]["id_user"],
+            doubleAuthent: doubleAuthent,
+            access: resultsAccess[0]["Access"],
+          });
+        }
+      );
     } else {
-      SQLquery = `SELECT blogs.Title as nom_blog, blogs.User_ID as id_user 
+      SQLquery = `SELECT blogs.Access, blogs.Title as nom_blog, blogs.User_ID as id_user 
           FROM blogs 
           WHERE ID_blog = ${id_blog}`;
       connection.query(SQLquery, async (err, results, fields) => {
@@ -507,6 +509,7 @@ app.post("/publications", (req, res) => {
             nom_blog: results[0]["nom_blog"],
             id_user: results[0]["id_user"],
             doubleAuthent: doubleAuthent,
+            access: results[0]["Access"],
           });
         } else {
           connection.end();
@@ -516,6 +519,7 @@ app.post("/publications", (req, res) => {
             nom_blog: "NC",
             id_user: decoded.ID_user,
             doubleAuthent: doubleAuthent,
+            access: "Error",
           });
         }
       });
@@ -523,6 +527,7 @@ app.post("/publications", (req, res) => {
   });
 });
 
+// Permet de supprimer une publication
 app.post("/delete-publication", (req, res) => {
   id_publication = req.body[0].id_publication;
   SQLquery = `DELETE FROM publications WHERE ID_publication = ${id_publication}`;
@@ -543,6 +548,7 @@ app.post("/delete-publication", (req, res) => {
   });
 });
 
+// Permet d'ajouter une publication
 app.post("/add-publication", (req, res) => {
   const newTitle = req.body[0]["newTitle"];
   const newDescription = req.body[0]["newDescription"];
@@ -577,10 +583,14 @@ app.post("/add-publication", (req, res) => {
   });
 });
 
+// Permet d'ajouter un blog
 app.post("/add-blog", (req, res) => {
   const newTitle = req.body[0]["newTitle"];
   const newAccess = req.body[0]["newAccess"];
   const userID = req.body[0]["userID"];
+
+  console.log("NEw tit", newTitle);
+  console.log("New acc", newAccess);
 
   const SQLquery = `INSERT INTO blogs (Title, Access, User_ID) VALUES ('${newTitle}', '${newAccess}', ${userID})`;
 
@@ -677,6 +687,7 @@ app.post("/edit-blog", (req, res) => {
   });
 });
 
+// Permet de supprimer un blog
 app.post("/delete-blog", (req, res) => {
   let SQLquery;
 
@@ -702,7 +713,7 @@ app.post("/delete-blog", (req, res) => {
   });
 });
 
-// Route pour récupérer l'intégralité des blogs
+// Route pour récupérer les informations d'un blog
 app.get("/blog", (req, res) => {
   const id_blog = req.query.idblog;
 
@@ -732,6 +743,7 @@ app.get("/blog", (req, res) => {
   );
 });
 
+// Génère et affiche le QRCode d'un utilisateur
 app.get("/qrcode/:user", (req, res) => {
   const authenticatorSecret = genererCleSecrete();
   const user = req.params.user;
@@ -757,6 +769,7 @@ app.get("/qrcode/:user", (req, res) => {
   });
 });
 
+// Permet de vérifier le 2FA d'un utilisateur
 app.post("/verify", async (req, res) => {
   //Récupération du code saisi par l'utilisateur
   const token = req.body[0].token;
@@ -829,6 +842,7 @@ app.post("/verify", async (req, res) => {
   }
 });
 
+// Permet d'activer le 2FA pour un utilisateur
 app.post("/enable-2fa", async (req, res) => {
   //Récupération du code saisi par l'utilisateur
   const token = req.body[0].token;
@@ -864,6 +878,7 @@ app.post("/enable-2fa", async (req, res) => {
         database: process.env.DATABASE_MYSQL,
       });
 
+      // On insère la secretKey sur l'utilisateur
       const insertSecretKeyQuery = `UPDATE Users SET secretKey = '${authenticatorSecret}' WHERE email = '${emailUser}'`;
       connection.query(insertSecretKeyQuery, (err, results, fields) => {
         if (err) {
@@ -875,6 +890,7 @@ app.post("/enable-2fa", async (req, res) => {
         }
       });
 
+      // On met à jour l'utilisateur pour dire qu'il a bien activé son authentification à deux facteurs
       connection.query(
         `UPDATE USERS SET 2faIsActivated = 1 WHERE Email = '${emailUser}'`,
         async (err, results, fields) => {
@@ -904,12 +920,13 @@ app.post("/enable-2fa", async (req, res) => {
   }
 });
 
+// Permet de récupérer les infos cookies d'un utilisateur
 app.post("/get-cookies", async (req, res) => {
   if (req.body[0].tokenJWT.tokenJWT) {
     let tokenJWT = req.body[0].tokenJWT.tokenJWT;
     var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
 
-    //let secretKeyExist = !isNull(getSecretKeyById(decoded.ID_user));
+    // Vérifie si en BD l'utilisateur à une secretKey ou non
     let secretKeyExist = (await getSecretKeyById(decoded.ID_user))
       ? true
       : false;
@@ -935,6 +952,7 @@ app.post("/get-cookies", async (req, res) => {
   }
 });
 
+// Permet de se déconnecter de toutes les session d'un utilisateur
 app.post("/logoutAll", async (req, res) => {
   //Récupération du code saisi par l'utilisateur
   const token = req.body[0].token;
@@ -970,6 +988,7 @@ app.post("/logoutAll", async (req, res) => {
   }
 });
 
+// Permet de se déconnecter
 app.post("/logout", (req, res) => {
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
 
@@ -998,6 +1017,7 @@ app.post("/logout", (req, res) => {
   });
 });
 
+// Permet de vérifier que le token JWT est en base (donc session active)
 app.post("/check-jwt", (req, res) => {
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
 
@@ -1025,6 +1045,7 @@ app.post("/check-jwt", (req, res) => {
   });
 });
 
+// Fonction permettant de générer une clé secrète
 function genererCleSecrete() {
   const caracteresPermis =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -1038,6 +1059,7 @@ function genererCleSecrete() {
   return cleSecrete;
 }
 
+// Fonction permettant de récupérer la secretKey de l'utilisateur en BDD
 function getSecretKeyById(userID) {
   return new Promise((resolve, reject) => {
     const connection = mysql.createConnection({

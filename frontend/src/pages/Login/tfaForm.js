@@ -22,11 +22,42 @@ function TfaForm() {
 
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
 
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [doubleAuth, setDoubleAuth] = useState(false);
+
   useEffect(() => {
     if (tokenJWT) {
       setCookie("tokenJWT", tokenJWT, { path: "/" });
     }
-  }, [tokenJWT, setCookie]);
+
+    const getCookies = async () => {
+      const data = [cookies];
+      const columnNames = ["tokenJWT"];
+
+      const jsonData = [
+        data.reduce((obj, val, i) => {
+          obj[columnNames[i]] = val;
+          return obj;
+        }, {}),
+      ];
+
+      await axios
+        .post("http://localhost:5000/get-cookies", JSON.stringify(jsonData), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        .then((res) => {
+          setDoubleAuth(res.data.doubleAuthent);
+          setLoggedIn(res.data.loggedIn);
+          //Vérification si l'utilisateur est connecté ou non
+          if (!res.data.loggedIn) {
+            navigate("/home");
+          }
+        });
+    };
+    getCookies();
+  }, [tokenJWT, setCookie, cookies, loggedIn]);
 
   const [code, setCode] = useState("");
 
@@ -81,7 +112,9 @@ function TfaForm() {
           method="post"
           onSubmit={handleSubmit}
         >
-          <label for="authCode">Code d'Authentification à Deux Facteurs:</label>
+          <label htmlFor="authCode">
+            Code d'Authentification à Deux Facteurs:
+          </label>
           <input
             type="text"
             id="authCode"
@@ -92,9 +125,9 @@ function TfaForm() {
             required
           />
 
-          <button type="submit">Valider le Code</button>
+          <button type="submit">Valider le Code ✔️</button>
           <button type="button" className="btn-retour">
-            <Link to="/home">Pas pour le moment</Link>
+            <Link to="/home">Pas pour le moment ▶️</Link>
           </button>
         </form>
       </div>

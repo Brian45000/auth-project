@@ -1,13 +1,11 @@
-//import "./styles.css";
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, us } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import NavBar from "../../components/NavBar";
 import axios from "axios";
 import Publication from "../../components/Publication";
 import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
-import { user } from "../../features/user";
-
+import { useNavigate } from "react-router-dom";
 function formattedDate(dateToFormate) {
   const dateOriginale = new Date(dateToFormate);
 
@@ -25,7 +23,7 @@ function formattedDate(dateToFormate) {
 function DetailBlog() {
   // Utilisez useLocation pour obtenir l'objet location
   const location = useLocation();
-
+  const navigate = useNavigate();
   // Utilisez location.search pour obtenir la chaîne de requête (ex: "?param1=valeur1&param2=valeur2")
   const searchParams = new URLSearchParams(location.search);
 
@@ -35,8 +33,10 @@ function DetailBlog() {
   // Déclarations de states reacts
   const [publications, setPublications] = useState();
   const [nom_blog, setNomBlog] = useState("");
+  const [access, setAccess] = useState("");
   const [ID_User, setID_User] = useState("");
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
+  const [loggedIn, setLoggedIn] = useState(false);
   const [doubleAuth, setDoubleAuth] = useState(false);
   const [IsMonBlog, setIsMonBlog] = useState(false);
   const [countPublications, setCountPublications] = useState(0);
@@ -88,6 +88,7 @@ function DetailBlog() {
 
   useEffect(() => {
     // function pour récuperer nos blogs
+
     const getBlog = async () => {
       const data = [id_blog, cookies, ID_User];
       const columnNames = ["id_blog", "tokenJWT", "id_user"];
@@ -110,6 +111,7 @@ function DetailBlog() {
             toast.success(res.data.message);
             setPublications(res.data.publications);
             setNomBlog(res.data.nom_blog);
+            setAccess(res.data.access);
             setID_User(res.data.id_user);
             setCountPublications(res.data.publications.length);
           } else {
@@ -121,7 +123,7 @@ function DetailBlog() {
     //function pour récuperer le cookie
     const getCookies = async () => {
       const data = [cookies];
-      const columnNames = ["tokenJWT", "BlogUserId"];
+      const columnNames = ["tokenJWT"];
 
       const jsonData = [
         data.reduce((obj, val, i) => {
@@ -138,13 +140,20 @@ function DetailBlog() {
         })
         .then((res) => {
           setDoubleAuth(res.data.doubleAuthent);
+          setLoggedIn(res.data.loggedIn);
+
           if (res.data.ID_user === ID_User) {
             setIsMonBlog(true);
           } else {
             setIsMonBlog(false);
           }
+
+          if (access === "Private" && !loggedIn) {
+            navigate("/home");
+          }
         });
     };
+
     if (cookies) getCookies();
   }, [cookies, ID_User, id_blog, countPublications]);
 
@@ -155,12 +164,12 @@ function DetailBlog() {
         <ToastContainer />
       </aside>
       <h2 className="titleH2">
-        Liste des des publications de "{nom_blog} "
+        Liste des des publications de " {nom_blog} "
         {doubleAuth && IsMonBlog && (
           <>
             <button
               onClick={() => SetIsAddPubli(true)}
-              className="detail-button"
+              className="detail-button btn-add"
             >
               Ajouter une publication ➕
             </button>
@@ -211,7 +220,7 @@ function DetailBlog() {
 
           {publications?.map((publication) => (
             <Publication
-              key={publication.ID_publication}
+              key={publication.id_publication}
               title={publication.Title}
               date_creation={formattedDate(publication.Date_creation)}
               description={publication.Description}

@@ -1,11 +1,14 @@
 import NavBar from "../../components/NavBar";
 import "./styles.css";
+import "../../assets/formStyle.css";
 import { useCookies } from "react-cookie";
 import axios from "axios";
 import BlogsDashboard from "../../components/BlogDashboard";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [blogsDashboard, setBlogsDashboard] = useState();
   const [IsAddBlog, SetIsAddBlog] = useState(false);
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
@@ -14,7 +17,7 @@ function Dashboard() {
     username: "",
     email: "",
     newTitle: "",
-    newAccess: "",
+    newAccess: "Public",
     ID_user: "",
   });
 
@@ -23,6 +26,7 @@ function Dashboard() {
   };
 
   useEffect(() => {
+    // on récupere les cookies
     const getCookies = async () => {
       const data = [cookies];
       const columnNames = ["tokenJWT", "BlogUserId"];
@@ -47,7 +51,10 @@ function Dashboard() {
             email: res.data.email,
             ID_user: res.data.ID_user,
           });
-          //setValues({ ...values, email: res.data.email });
+
+          if (!res.data.doubleAuthent) {
+            navigate("/home");
+          }
         });
     };
     getCookies();
@@ -61,11 +68,6 @@ function Dashboard() {
           return obj;
         }, {}),
       ];
-
-      //
-      // A MODIFIER C'EST PAS LA BONNE ROUTE !!
-      //
-      //
       await axios
         .post(
           "http://localhost:5000/blogs-dashboard",
@@ -82,7 +84,7 @@ function Dashboard() {
     };
     getBlogs();
   }, [cookies]);
-
+  // on n'ajoute les nouvelles valeurs au serveur
   const handleSubmitAdd = async (e) => {
     try {
       const sendAdd = async () => {
@@ -134,7 +136,7 @@ function Dashboard() {
           <>
             <button
               onClick={() => SetIsAddBlog(true)}
-              className="detail-button"
+              className="detail-button btn-add"
             >
               Ajouter un blog ➕
             </button>

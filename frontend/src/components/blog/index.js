@@ -2,7 +2,7 @@ import "./styles.css";
 import { Link } from "react-router-dom";
 
 function Blog(props) {
-  const { id, title, access, user, numPublications, name, nb_publi } = props;
+  const { id, title, access, name, nb_publi } = props;
 
   return (
     <div className="blog-card">

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import axios from "axios";
 import Blog from "../components/blog";
@@ -54,10 +53,6 @@ function Home() {
           ))}
         </div>
       )}
-      {/*blogs?.map((blog) => (
-        <Blog title={blog.title} acces={blog.acces} user={blog.user} />
-      ))}
-      {/*<div>{/*<Blog title={"titre"} acces={"acces"} user={"user"} />}</div>*/}
     </div>
   );
 }

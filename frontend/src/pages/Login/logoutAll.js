@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 function LogoutAll() {
   const navigate = useNavigate();
+  // on definit l'usage des cookikes en reacts
   const [cookies, setCookie, removeCookie] = useCookies(["tokenJWT"]);
 
   const [code, setCode] = useState("");
@@ -17,7 +18,7 @@ function LogoutAll() {
   const handleCodeChange = (e) => {
     setCode(e.target.value);
   };
-
+  // on n'envoie la requete pour deconnecté toute les equipements
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sendData = async () => {

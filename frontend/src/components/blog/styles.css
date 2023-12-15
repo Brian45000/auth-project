@@ -48,3 +48,8 @@
 .detail-button:hover {
     background-color: #45a049;
 }
+
+.detail-button.btn-add{
+    float:right;
+    margin: 0 4em 0 0; 
+}

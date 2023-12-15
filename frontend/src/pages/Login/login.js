@@ -5,21 +5,16 @@ import "../../assets/formStyle.css";
 import NavBar from "../../components/NavBar";
 import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
-import { user_info } from "../../store/selector";
-import { recup_id } from "../../features/user";
-import { useSelector, useDispatch } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 
 function Login() {
-  //let user = useSelector(user_info);
-  // const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [identifiant, setIdentifiant] = useState("");
   const [mdp, setMdp] = useState("");
 
   const [cookies, setCookie, removeCookie] = useCookies(["tokenJWT"]);
-
+  // functions qui s'occupe de lire les événements
   const handleIdentifiantChange = (e) => {
     setIdentifiant(e.target.value);
   };
@@ -32,6 +27,7 @@ function Login() {
     e.preventDefault();
 
     try {
+      // en n'envoi les informations du client au serveur
       const sendLogin = async () => {
         const data = [identifiant, mdp];
         const columnNames = ["identifiant", "mdp"];
@@ -56,7 +52,6 @@ function Login() {
               toast.success(res.data.message);
               setCookie("tokenJWT", res.data.tokenJWT, { path: "/" });
 
-              //dispatch(recup_id(res.data.ID_user));
               if (res.data.is2faIsActivated === 1) {
                 navigate("/verify");
               } else {
@@ -100,7 +95,7 @@ function Login() {
             name="username"
             value={identifiant}
             onChange={handleIdentifiantChange}
-            placeholder="Saisir votre identifiant"
+            placeholder="Saisir votre adresse mail"
             required
           />
 
@@ -115,10 +110,10 @@ function Login() {
             required
           />
 
-          <button type="submit">Se Connecter</button>
+          <button type="submit">Se Connecter ✔️</button>
 
           <button type="button" className="btn-create-account">
-            <Link to="/register">Créer un compte</Link>
+            <Link to="/register">Créer un compte ➕</Link>
           </button>
         </form>
 

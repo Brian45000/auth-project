@@ -1,10 +1,10 @@
 import "./styles.css";
-import { Link, useNavigate } from "react-router-dom";
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 function Publication(props) {
-  const navigate = useNavigate();
+  // on recupere les parametres de la page DetailBlog
   const {
     title,
     date_creation,
@@ -13,18 +13,21 @@ function Publication(props) {
     doubleAuth,
     IsMonBlog,
     id_publication,
-    id_blog,
   } = props;
+  // on initie nos states
   const [IsModif, SetIsModif] = useState(false);
 
   const [values, setValues] = React.useState({
     newTitle: title,
     newDescription: description,
   });
+
+  // on déclare nos fonctions pour enregistrer les changement dynamique de l'utilisateur
   const handleChange = (prop) => (event) => {
     setValues({ ...values, [prop]: event.target.value });
   };
 
+  // cette function permet d'envoyer les données enregistrés au serveur pour modifier une ressource existante
   const handleSubmitEdit = async (e) => {
     try {
       const sendModification = async () => {
@@ -59,6 +62,7 @@ function Publication(props) {
     } catch (e) {}
   };
 
+  //cette function permet de supprimé le blog selectionné
   const handleDelete = async (e) => {
     try {
       const deletePublication = async () => {

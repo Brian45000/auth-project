@@ -1,10 +1,11 @@
 import "./styles.css";
-import { Link } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 function BlogDashboard(props) {
-  const { id, title, access, name, nb_publi } = props;
+  const { id, title, access, name } = props;
+
+  // on nomme nos Etats reacts
   const [IsModif, SetIsModif] = useState(false);
 
   const [values, setValues] = React.useState({
