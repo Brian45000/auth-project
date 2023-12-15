@@ -60,11 +60,14 @@ function LogoutAll() {
       </aside>
       <div className="card-login">
         <form
-          class="centered-form"
+          className="centered-form"
           action="#"
           method="post"
           onSubmit={handleSubmit}
         >
+          <h2>
+            Voulez vous vraiment vous déconnecter de tout les équipements ?{" "}
+          </h2>
           <label for="authCode">Code d'Authentification à Deux Facteurs:</label>
           <input
             type="text"

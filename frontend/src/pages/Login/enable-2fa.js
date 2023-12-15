@@ -22,6 +22,7 @@ function Enable2faForm() {
 
   const [code, setCode] = useState("");
   const [imageQRCode, setImageQRCode] = useState("");
+  const [secretKey, setsecretKey] = useState("");
 
   useEffect(() => {
     try {
@@ -40,6 +41,7 @@ function Enable2faForm() {
           if (res.data.status === "Error") {
             toast.error(res.data.message);
           } else {
+            setsecretKey(res.data.secretKey);
             setImageQRCode(res.data.qrcode);
           }
         });
@@ -54,8 +56,8 @@ function Enable2faForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sendLogin = async () => {
-      const data = [code, emailUser, cookies];
-      const columnNames = ["token", "emailUser", "tokenJWT"];
+      const data = [code, emailUser, cookies, secretKey];
+      const columnNames = ["token", "emailUser", "tokenJWT", "secretKey"];
 
       const jsonData = [
         data.reduce((obj, val, i) => {
@@ -92,7 +94,7 @@ function Enable2faForm() {
       </aside>
       <div className="card-login">
         <form
-          class="centered-form"
+          className="centered-form"
           action="#"
           method="post"
           onSubmit={handleSubmit}

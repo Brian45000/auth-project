@@ -16,6 +16,7 @@ function NavBar() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [doubleAuth, setDoubleAuth] = useState(false);
   const [email, setEmail] = useState();
+  const [secretKeyExist, setSecretKeyExist] = useState();
 
   useEffect(() => {
     const getcheckToken = async () => {
@@ -67,6 +68,7 @@ function NavBar() {
           setEmail(res.data.email);
           setLoggedIn(res.data.loggedIn);
           setDoubleAuth(res.data.doubleAuthent);
+          setSecretKeyExist(res.data.secretKeyExist);
         });
     };
     getInfoToken();
@@ -94,6 +96,7 @@ function NavBar() {
           toast.error(res.data.message);
         } else {
           toast.success(res.data.message);
+
           removeCookie(["tokenJWT"]);
           navigate("/home");
         }
@@ -122,18 +125,24 @@ function NavBar() {
             <div className="dropdown-content">
               {!doubleAuth && (
                 <>
-                  <Link to={"/verify"}>Activer mon accès Admin 🔑</Link>
+                  {secretKeyExist && (
+                    <Link to={"/verify"}>Activer mon accès Admin 🔑</Link>
+                  )}
 
-                  <Link
-                    to={
-                      "/enable-2fa?email=" +
-                      email +
-                      "&tokenJWT=" +
-                      cookies["tokenJWT"]
-                    }
-                  >
-                    Mon QRCode 🖼️
-                  </Link>
+                  {!secretKeyExist && (
+                    <>
+                      <Link
+                        to={
+                          "/enable-2fa?email=" +
+                          email +
+                          "&tokenJWT=" +
+                          cookies["tokenJWT"]
+                        }
+                      >
+                        Mon QRCode 🖼️
+                      </Link>
+                    </>
+                  )}
                 </>
               )}
               <button className="btn-logout" onClick={() => handleLogout()}>

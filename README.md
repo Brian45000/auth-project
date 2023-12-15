@@ -10,7 +10,8 @@ CREATE TABLE Users (
   Email VARCHAR(255) NOT NULL,
   Username VARCHAR(255) NOT NULL,
   Password VARCHAR(255) NULL,
-  2faIsActivated INT NOT NULL DEFAULT '0'
+  2faIsActivated INT NOT NULL DEFAULT '0',
+  secretKey VARCHAR(50) NULL
 );
 
 -- Création de la table Blogs

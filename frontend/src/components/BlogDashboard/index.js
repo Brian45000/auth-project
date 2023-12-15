@@ -86,7 +86,6 @@ function BlogDashboard(props) {
           <p className="blog-title">{title}</p>
           <p className="blog-access">Accès : {access}</p>
           <p className="blog-created-by">Créé par : {name}</p>
-          <p className="num-publications">Publications : {nb_publi}</p>
 
           <button onClick={() => SetIsModif(true)} className="update-button">
             Modifier ✏️

@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 require("dotenv").config();
 
@@ -158,9 +159,7 @@ async function verifyAndAddUser(userData) {
               const SQLquery = `INSERT INTO UserJWT (User_ID, JWT) VALUES ('${results.insertId}', '${tokenJWT}')`;
 
               connection.query(SQLquery, (err, results, fields) => {
-                if (!err) {
-                  console.error("Insertion du JWT :");
-                } else {
+                if (err) {
                   console.error("Erreur lors de l'insertion du JWT:", err);
                 }
               });
@@ -334,9 +333,7 @@ app.post("/login", async (req, res) => {
 
           const SQLquery = `INSERT INTO UserJWT (User_ID, JWT) VALUES ('${results[0]["ID_user"]}', '${tokenJWT}')`;
           connection.query(SQLquery, (err, results, fields) => {
-            if (!err) {
-              console.error("Insertion du JWT :");
-            } else {
+            if (err) {
               console.error("Erreur lors de l'insertion du JWT:", err);
             }
           });
@@ -348,6 +345,7 @@ app.post("/login", async (req, res) => {
             is2faIsActivated: checkIf2faIsActivated,
             email: identifiant,
             tokenJWT: tokenJWT,
+            ID_user: results[0]["ID_user"],
           });
         } else {
           connection.end();
@@ -369,7 +367,6 @@ app.post("/login", async (req, res) => {
 
 // Route pour récupérer l'intégralité des blogs
 app.post("/blogs", (req, res) => {
-  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   let SQLquery;
 
@@ -416,11 +413,11 @@ app.post("/blogs", (req, res) => {
 });
 
 // Route pour récupérer l'intégralité de ses blogs
-app.post("/blogs-dashboard", (req, res) => {
-  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+app.post("/blogs-dashboard", async (req, res) => {
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   let SQLquery;
-
+  var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+  const authenticatorSecret = await getSecretKeyById(decoded.ID_user);
   try {
     var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
 
@@ -460,7 +457,6 @@ app.post("/blogs-dashboard", (req, res) => {
 
 // Route pour récupérer l'intégralité des blogs
 app.post("/publications", (req, res) => {
-  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   let id_blog = req.body[0].id_blog;
 
@@ -737,7 +733,7 @@ app.get("/blog", (req, res) => {
 });
 
 app.get("/qrcode/:user", (req, res) => {
-  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+  const authenticatorSecret = genererCleSecrete();
   const user = req.params.user;
   const service = "ProjetDevAuthLiveCampus";
 
@@ -755,16 +751,18 @@ app.get("/qrcode/:user", (req, res) => {
     res.send({
       //status: "Success",
       //message: "Code Valide",
+      secretKey: authenticatorSecret,
       qrcode: "<img src='" + imageUrl + "' alt='qrcode'>",
     });
   });
 });
 
-app.post("/verify", (req, res) => {
-  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+app.post("/verify", async (req, res) => {
   //Récupération du code saisi par l'utilisateur
   const token = req.body[0].token;
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+  var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+  const authenticatorSecret = await getSecretKeyById(decoded.ID_user);
 
   try {
     // Si la personne n'a pas saisi le token, c'est non
@@ -801,9 +799,7 @@ app.post("/verify", (req, res) => {
         });
 
         connection.query(SQLquery, (err, results, fields) => {
-          if (!err) {
-            console.error("Insertion du JWT :", err);
-          } else {
+          if (err) {
             console.error("Erreur lors de l'insertion du JWT:", err);
           }
         });
@@ -833,10 +829,13 @@ app.post("/verify", (req, res) => {
   }
 });
 
-app.post("/enable-2fa", (req, res) => {
-  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+app.post("/enable-2fa", async (req, res) => {
   //Récupération du code saisi par l'utilisateur
   const token = req.body[0].token;
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+  var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+  const authenticatorSecret = req.body[0].secretKey;
+
   const emailUser = req.body[0].emailUser;
 
   try {
@@ -863,6 +862,17 @@ app.post("/enable-2fa", (req, res) => {
         user: process.env.USERNAME_MYSQL,
         password: process.env.PASSWORD_MYSQL,
         database: process.env.DATABASE_MYSQL,
+      });
+
+      const insertSecretKeyQuery = `UPDATE Users SET secretKey = '${authenticatorSecret}' WHERE email = '${emailUser}'`;
+      connection.query(insertSecretKeyQuery, (err, results, fields) => {
+        if (err) {
+          console.error(
+            "Erreur lors de l'ajout de la clé secrète à la base de données :",
+            err
+          );
+          return;
+        }
       });
 
       connection.query(
@@ -894,11 +904,15 @@ app.post("/enable-2fa", (req, res) => {
   }
 });
 
-app.post("/get-cookies", (req, res) => {
+app.post("/get-cookies", async (req, res) => {
   if (req.body[0].tokenJWT.tokenJWT) {
     let tokenJWT = req.body[0].tokenJWT.tokenJWT;
     var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
-    decoded.doubleAuthent;
+
+    //let secretKeyExist = !isNull(getSecretKeyById(decoded.ID_user));
+    let secretKeyExist = (await getSecretKeyById(decoded.ID_user))
+      ? true
+      : false;
     const loggedIn = decoded.loggedIn;
     const doubleAuthent = decoded.doubleAuthent;
     res.send({
@@ -908,6 +922,7 @@ app.post("/get-cookies", (req, res) => {
       email: decoded.email,
       username: decoded.username,
       ID_user: decoded.ID_user,
+      secretKeyExist: secretKeyExist,
     });
   } else {
     res.send({
@@ -915,16 +930,17 @@ app.post("/get-cookies", (req, res) => {
       loggedIn: false,
       doubleAuthent: false,
       email: false,
+      secretKeyExist: false,
     });
   }
 });
 
-app.post("/logoutAll", (req, res) => {
-  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+app.post("/logoutAll", async (req, res) => {
   //Récupération du code saisi par l'utilisateur
   const token = req.body[0].token;
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+  const authenticatorSecret = await getSecretKeyById(decoded.ID_user);
 
   // On vérifie si le code est bon
   const isValid = authenticator.check(token, authenticatorSecret);
@@ -1008,6 +1024,49 @@ app.post("/check-jwt", (req, res) => {
     }
   });
 });
+
+function genererCleSecrete() {
+  const caracteresPermis =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  let cleSecrete = "";
+
+  for (let i = 0; i < 50; i++) {
+    const index = Math.floor(Math.random() * caracteresPermis.length);
+    cleSecrete += caracteresPermis.charAt(index);
+  }
+
+  return cleSecrete;
+}
+
+function getSecretKeyById(userID) {
+  return new Promise((resolve, reject) => {
+    const connection = mysql.createConnection({
+      host: process.env.HOST_MYSQL,
+      user: process.env.USERNAME_MYSQL,
+      password: process.env.PASSWORD_MYSQL,
+      database: process.env.DATABASE_MYSQL,
+    });
+
+    const selectSecretKeyQuery = `SELECT secretKey FROM users WHERE ID_user = ${userID}`;
+
+    connection.query(selectSecretKeyQuery, (err, results, fields) => {
+      if (results.length > 0) {
+        if (results[0].secretKey !== null) {
+          const secretKey = results[0].secretKey;
+          connection.end();
+          resolve(secretKey.toString());
+        } else {
+          connection.end();
+          resolve(null);
+        }
+      } else {
+        console.log("Aucun utilisateur trouvé avec l'ID spécifié.");
+        connection.end();
+        resolve(null);
+      }
+    });
+  });
+}
 
 app.listen(5000, () => {
   console.log("listening");

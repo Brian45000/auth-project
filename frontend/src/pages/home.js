@@ -5,19 +5,14 @@ import axios from "axios";
 import Blog from "../components/blog";
 import { useCookies } from "react-cookie";
 
-export async function data_axios(url) {
-  //let config = { headers: { Authorization: `Bearer ${token}` } };
-
-  const { data } = await axios.get(url);
-  return data;
-}
-
 function Home() {
   const [blogs, setBlogs] = useState();
   const [cookies, setCookie] = useCookies(["tokenJWT"]);
 
   useEffect(() => {
+    //function pour récuperer nos blogs
     const getBlogs = async () => {
+      // on lis le champ de notre cookie grace à columnNames
       const data = [cookies];
       const columnNames = ["tokenJWT"];
 

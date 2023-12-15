@@ -64,7 +64,7 @@ function Register() {
 
       <div className="card-login">
         <form
-          class="centered-form"
+          className="centered-form"
           action="#"
           method="post"
           onSubmit={handleSubmit}

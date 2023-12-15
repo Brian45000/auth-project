@@ -32,6 +32,7 @@ function DetailBlog() {
   // Utilisez get pour récupérer la valeur d'un paramètre spécifique
   const id_blog = searchParams.get("id");
 
+  // Déclarations de states reacts
   const [publications, setPublications] = useState();
   const [nom_blog, setNomBlog] = useState("");
   const [ID_User, setID_User] = useState("");
@@ -45,10 +46,12 @@ function DetailBlog() {
     newTitle: "",
     newDescription: "",
   });
+  // Déclaration de la function pour changer le state value selon l'input reçu
   const handleChange = (prop) => (event) => {
     setValues({ ...values, [prop]: event.target.value });
   };
 
+  // function permettant d'envoyer les nouvels information d'un nouveau à la base de donnée
   const handleSubmitAdd = async (e) => {
     try {
       const sendAdd = async () => {
@@ -84,6 +87,7 @@ function DetailBlog() {
   };
 
   useEffect(() => {
+    // function pour récuperer nos blogs
     const getBlog = async () => {
       const data = [id_blog, cookies, ID_User];
       const columnNames = ["id_blog", "tokenJWT", "id_user"];
@@ -114,7 +118,7 @@ function DetailBlog() {
         });
     };
     getBlog();
-
+    //function pour récuperer le cookie
     const getCookies = async () => {
       const data = [cookies];
       const columnNames = ["tokenJWT", "BlogUserId"];

@@ -1,21 +1,21 @@
 import { produce } from "immer";
 
 const initialState = {
-  count: 0,
+  id: "",
 };
 
-const COUNT = "count";
+const ID = "id";
 //const EMAIL = "email";
 
-export const publi_count = (publi) => ({
-  type: COUNT,
-  payload: publi,
+export const recup_id = (id) => ({
+  type: ID,
+  payload: id,
 });
 
 export default function userReducer(state = initialState, action) {
   return produce(state, (draft) => {
-    if (action.type === COUNT) {
-      draft.token = action.payload;
+    if (action.type === ID) {
+      draft.id = action.payload;
     }
   });
 }
