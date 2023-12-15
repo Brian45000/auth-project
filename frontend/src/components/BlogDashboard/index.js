@@ -20,7 +20,7 @@ function BlogDashboard(props) {
     try {
       const sendModification = async () => {
         const data = [values.newTitle, values.newAccess, id];
-        const columnNames = ["newTitle", "newAccess", "id"];
+        const columnNames = ["newTitle", "newAccess", "id_blog"];
 
         const jsonData = [
           data.reduce((obj, val, i) => {
@@ -50,7 +50,7 @@ function BlogDashboard(props) {
     try {
       const deleteBlog = async () => {
         const data = [id];
-        const columnNames = ["id"];
+        const columnNames = ["id_blog"];
 
         const jsonData = [
           data.reduce((obj, val, i) => {

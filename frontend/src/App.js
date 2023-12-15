@@ -8,6 +8,7 @@ import {
 import React, { useState, useEffect } from "react";
 import Register from "./pages/Login/register";
 import Login from "./pages/Login/login";
+import LogoutAll from "./pages/Login/logoutAll";
 import Home from "./pages/home";
 import { Provider } from "react-redux";
 import { CookiesProvider } from "react-cookie";
@@ -28,6 +29,9 @@ function App() {
               {/* CONNEXION */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+
+              {/* DECONNEXION */}
+              <Route path="/logoutAll" element={<LogoutAll />} />
 
               {/* VERIFICATION COMPTE */}
               <Route path="/verify" element={<TfaForm />} />

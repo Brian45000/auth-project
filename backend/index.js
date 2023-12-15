@@ -18,7 +18,6 @@ const qrcode = require("qrcode");
 const { authenticator } = require("otplib");
 
 const app = express();
-
 // Utilisez express-session middleware
 app.use(
   session({ secret: "azerty123", resave: true, saveUninitialized: true })
@@ -87,20 +86,10 @@ async function verifyAndAddUser(userData) {
       database: process.env.DATABASE_MYSQL,
     });
 
-    connection.connect((err) => {
-      if (err) {
-        console.error("Erreur de connexion à la base de données :", err);
-        reject(err);
-      }
-      console.log("Connecté à la base de données MySQL");
-    });
-
     connection.query(
       `SELECT * FROM users WHERE email = '${userData.email}'`,
       async (err, results, fields) => {
         if (results.length === 1) {
-          connection.end();
-
           var tokenJWT = jwt.sign(
             {
               iss: "http://localhost",
@@ -112,6 +101,18 @@ async function verifyAndAddUser(userData) {
             },
             process.env.SECRET_KEY_JWT
           );
+
+          // Ajouter l'ajout en BD
+          const SQLquery = `INSERT INTO UserJWT (User_ID, JWT) VALUES ('${results[0]["ID_user"]}', '${tokenJWT}')`;
+
+          connection.query(SQLquery, (err, results, fields) => {
+            if (!err) {
+              console.error("Insertion du JWT :");
+            } else {
+              console.error("Erreur lors de l'insertion du JWT:", err);
+            }
+          });
+          connection.end();
 
           if (results[0]["2faIsActivated"] === 1) {
             resolve(`http://localhost:3000/verify?tokenJWT=${tokenJWT}`);
@@ -127,7 +128,6 @@ async function verifyAndAddUser(userData) {
             username: userData.username,
             password: "",
           };
-
           connection.query(
             "INSERT INTO users SET ?",
             nouvelleLigne,
@@ -154,7 +154,18 @@ async function verifyAndAddUser(userData) {
                 process.env.SECRET_KEY_JWT
               );
 
+              // On stocke le JWT en BD (WhiteList)
+              const SQLquery = `INSERT INTO UserJWT (User_ID, JWT) VALUES ('${results.insertId}', '${tokenJWT}')`;
+
+              connection.query(SQLquery, (err, results, fields) => {
+                if (!err) {
+                  console.error("Insertion du JWT :");
+                } else {
+                  console.error("Erreur lors de l'insertion du JWT:", err);
+                }
+              });
               connection.end();
+
               resolve(
                 `http://localhost:3000/enable-2fa?email=${userData.email}&tokenJWT=${tokenJWT}`
               );
@@ -234,23 +245,6 @@ app.post("/register", async (req, res) => {
   const newUsername = jsonData[0]["newUsername"];
   let newPassword = jsonData[0]["newPassword"];
 
-  // Configure les paramètres de connexion à la base de données
-  const connection = mysql.createConnection({
-    host: process.env.HOST_MYSQL,
-    user: process.env.USERNAME_MYSQL,
-    password: process.env.PASSWORD_MYSQL,
-    database: process.env.DATABASE_MYSQL,
-  });
-
-  // Connecte-toi à la base de données
-  connection.connect((err) => {
-    if (err) {
-      console.error("Erreur de connexion à la base de données :", err);
-      throw err;
-    }
-    console.log("Connecté à la base de données MySQL");
-  });
-
   bcrypt.hash(newPassword, 10, function (err, hash) {
     // Exemple de requête INSERT
     const nouvelleLigne = {
@@ -259,6 +253,13 @@ app.post("/register", async (req, res) => {
       username: newUsername,
       password: hash,
     };
+
+    const connection = mysql.createConnection({
+      host: process.env.HOST_MYSQL,
+      user: process.env.USERNAME_MYSQL,
+      password: process.env.PASSWORD_MYSQL,
+      database: process.env.DATABASE_MYSQL,
+    });
 
     connection.query(
       `SELECT * FROM users WHERE Email = '${email}' OR Username = '${newUsername}'`,
@@ -274,37 +275,14 @@ app.post("/register", async (req, res) => {
                 "Nouvelle ligne insérée avec succès. ID de la nouvelle ligne :",
                 results.insertId
               );
-
-              // Ferme la connexion à la base de données après avoir effectué les opérations nécessaires
-              connection.end((err) => {
-                if (err) {
-                  console.error(
-                    "Erreur lors de la déconnexion de la base de données :",
-                    err
-                  );
-                  throw err;
-                }
-                console.log("Déconnecté de la base de données MySQL");
-              });
-
+              connection.end();
               res.send({
                 status: "Success",
               });
             }
           );
         } else {
-          // Ferme la connexion à la base de données après avoir effectué les opérations nécessaires
-          connection.end((err) => {
-            if (err) {
-              console.error(
-                "Erreur lors de la déconnexion de la base de données :",
-                err
-              );
-              throw err;
-            }
-            console.log("Déconnecté de la base de données MySQL");
-          });
-
+          connection.end();
           res.send({
             status: "Error",
           });
@@ -320,23 +298,12 @@ app.post("/login", async (req, res) => {
   const identifiant = jsonData[0]["identifiant"];
   const mdp = jsonData[0]["mdp"];
 
-  // Configure les paramètres de connexion à la base de données
   const connection = mysql.createConnection({
     host: process.env.HOST_MYSQL,
     user: process.env.USERNAME_MYSQL,
     password: process.env.PASSWORD_MYSQL,
     database: process.env.DATABASE_MYSQL,
   });
-
-  // Connecte-toi à la base de données
-  connection.connect((err) => {
-    if (err) {
-      console.error("Erreur de connexion à la base de données :", err);
-      throw err;
-    }
-    console.log("Connecté à la base de données MySQL");
-  });
-
   connection.query(
     `SELECT * FROM users WHERE Email = '${identifiant}'`,
     async (err, results, fields) => {
@@ -363,6 +330,18 @@ app.post("/login", async (req, res) => {
           );
           // { expiresIn: '2d' } pour rajouter un délai d'expiration sur le JWT
 
+          // On stocke le JWT en BD (WhiteList)
+
+          const SQLquery = `INSERT INTO UserJWT (User_ID, JWT) VALUES ('${results[0]["ID_user"]}', '${tokenJWT}')`;
+          connection.query(SQLquery, (err, results, fields) => {
+            if (!err) {
+              console.error("Insertion du JWT :");
+            } else {
+              console.error("Erreur lors de l'insertion du JWT:", err);
+            }
+          });
+          connection.end();
+
           res.send({
             status: "Success",
             message: "Connexion réussie",
@@ -371,12 +350,14 @@ app.post("/login", async (req, res) => {
             tokenJWT: tokenJWT,
           });
         } else {
+          connection.end();
           res.send({
             status: "Error",
             message: "Connexion échouée",
           });
         }
       } else {
+        connection.end();
         res.send({
           status: "Error",
           message: "Connexion échouée",
@@ -391,17 +372,11 @@ app.post("/blogs", (req, res) => {
   const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   let SQLquery;
-  const connection = mysql.createConnection({
-    host: process.env.HOST_MYSQL,
-    user: process.env.USERNAME_MYSQL,
-    password: process.env.PASSWORD_MYSQL,
-    database: process.env.DATABASE_MYSQL,
-  });
 
-  SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, count(publications.ID_publication) AS nb_publi
+  SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, COALESCE(count(publications.ID_publication), 0) AS nb_publi
   FROM blogs
   INNER JOIN users ON blogs.User_ID = users.ID_user
-  INNER JOIN publications ON blogs.ID_blog = publications.Blog_ID
+  LEFT JOIN publications ON blogs.ID_blog = publications.Blog_ID
   WHERE blogs.Access = 'Public'
   GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
 
@@ -409,20 +384,29 @@ app.post("/blogs", (req, res) => {
     var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
 
     if (decoded.loggedIn == true) {
-      SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, count(publications.ID_publication) AS nb_publi
+      SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, COALESCE(count(publications.ID_publication), 0) AS nb_publi
       FROM blogs
       INNER JOIN users ON blogs.User_ID = users.ID_user
-      INNER JOIN publications ON blogs.ID_blog = publications.Blog_ID
+      LEFT JOIN publications ON blogs.ID_blog = publications.Blog_ID
       GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
     }
   } catch (error) {}
 
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
   connection.query(SQLquery, async (err, results, fields) => {
     if (results.length != 0) {
+      connection.end();
       res.send({
         blogs: results,
       });
     } else {
+      connection.end();
       res.send({
         status: "Error",
         message: "echec envoi des blogs",
@@ -436,21 +420,14 @@ app.post("/blogs-dashboard", (req, res) => {
   const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
   let tokenJWT = req.body[0].tokenJWT.tokenJWT;
   let SQLquery;
-  const connection = mysql.createConnection({
-    host: process.env.HOST_MYSQL,
-    user: process.env.USERNAME_MYSQL,
-    password: process.env.PASSWORD_MYSQL,
-    database: process.env.DATABASE_MYSQL,
-  });
 
   try {
     var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
 
     if (decoded.loggedIn && decoded.doubleAuthent) {
-      SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, blogs.User_ID, count(publications.ID_publication) AS nb_publi
+      SQLquery = `SELECT blogs.Access, blogs.Title, blogs.ID_blog, users.FullName, blogs.User_ID
       FROM blogs
       INNER JOIN users ON blogs.User_ID = users.ID_user
-      INNER JOIN publications ON blogs.ID_blog = publications.Blog_ID
       WHERE blogs.User_ID = ${decoded.ID_user}
       GROUP BY blogs.Access, blogs.Title, blogs.ID_blog, users.FullName;`;
     } else {
@@ -458,12 +435,21 @@ app.post("/blogs-dashboard", (req, res) => {
     }
   } catch (error) {}
 
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
   connection.query(SQLquery, async (err, results, fields) => {
     if (results.length != 0) {
+      connection.end();
       res.send({
         blogs: results,
       });
     } else {
+      connection.end();
       res.send({
         status: "Error",
         message: "echec envoi des blogs",
@@ -488,12 +474,6 @@ app.post("/publications", (req, res) => {
   }
 
   let SQLquery;
-  const connection = mysql.createConnection({
-    host: process.env.HOST_MYSQL,
-    user: process.env.USERNAME_MYSQL,
-    password: process.env.PASSWORD_MYSQL,
-    database: process.env.DATABASE_MYSQL,
-  });
 
   SQLquery = `SELECT publications.ID_publication as id_publication, publications.Title, publications.Date_creation, publications.Description, publications.Blog_ID, publications.User_ID, blogs.Title as nom_blog, users.FullName, users.ID_User as id_user
   FROM publications 
@@ -501,8 +481,16 @@ app.post("/publications", (req, res) => {
   INNER JOIN users ON publications.User_ID = users.ID_User
   WHERE Blog_ID = ${id_blog}`;
 
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
   connection.query(SQLquery, async (err, results, fields) => {
     if (results.length != 0) {
+      connection.end();
       res.send({
         status: "Success",
         publications: results,
@@ -511,15 +499,38 @@ app.post("/publications", (req, res) => {
         doubleAuthent: doubleAuthent,
       });
     } else {
-      res.send({
-        status: "Error",
-        message: "echec envoi des publications",
+      SQLquery = `SELECT blogs.Title as nom_blog, blogs.User_ID as id_user 
+          FROM blogs 
+          WHERE ID_blog = ${id_blog}`;
+      connection.query(SQLquery, async (err, results, fields) => {
+        if (results.length != 0) {
+          connection.end();
+          res.send({
+            status: "Success",
+            publications: [],
+            nom_blog: results[0]["nom_blog"],
+            id_user: results[0]["id_user"],
+            doubleAuthent: doubleAuthent,
+          });
+        } else {
+          connection.end();
+          res.send({
+            status: "Error",
+            publications: [],
+            nom_blog: "NC",
+            id_user: decoded.ID_user,
+            doubleAuthent: doubleAuthent,
+          });
+        }
       });
     }
   });
 });
 
 app.post("/delete-publication", (req, res) => {
+  id_publication = req.body[0].id_publication;
+  SQLquery = `DELETE FROM publications WHERE ID_publication = ${id_publication}`;
+
   const connection = mysql.createConnection({
     host: process.env.HOST_MYSQL,
     user: process.env.USERNAME_MYSQL,
@@ -527,9 +538,8 @@ app.post("/delete-publication", (req, res) => {
     database: process.env.DATABASE_MYSQL,
   });
 
-  id_publication = req.body[0].id_publication;
-  SQLquery = `DELETE FROM publications WHERE ID_publication = ${id_publication}`;
   connection.query(SQLquery, async (err, results, fields) => {
+    connection.end();
     res.send({
       status: "Success",
       message: "Publication supprimée avec succès",
@@ -544,6 +554,8 @@ app.post("/add-publication", (req, res) => {
   const currentDate = new Date().toISOString().slice(0, 19).replace("T", " ");
   const blogID = req.body[0]["blogID"];
 
+  const SQLquery = `INSERT INTO publications (Title, Description, User_ID, date_creation, Blog_ID) VALUES ('${newTitle}', '${newDescription}', ${userID}, '${currentDate}', ${blogID})`;
+
   const connection = mysql.createConnection({
     host: process.env.HOST_MYSQL,
     user: process.env.USERNAME_MYSQL,
@@ -551,19 +563,51 @@ app.post("/add-publication", (req, res) => {
     database: process.env.DATABASE_MYSQL,
   });
 
-  const SQLquery = `INSERT INTO publications (Title, Description, User_ID, date_creation, Blog_ID) VALUES ('${newTitle}', '${newDescription}', ${userID}, '${currentDate}', ${blogID})`;
-
   connection.query(SQLquery, (err, results, fields) => {
     if (!err) {
+      connection.end();
       res.send({
         status: "Success",
         message: "Publication ajoutée avec succès",
       });
     } else {
+      connection.end();
       console.error("Erreur lors de l'insertion de la publication :", err);
       res.send({
         status: "Error",
         message: "Échec de l'ajout de la publication",
+      });
+    }
+  });
+});
+
+app.post("/add-blog", (req, res) => {
+  const newTitle = req.body[0]["newTitle"];
+  const newAccess = req.body[0]["newAccess"];
+  const userID = req.body[0]["userID"];
+
+  const SQLquery = `INSERT INTO blogs (Title, Access, User_ID) VALUES ('${newTitle}', '${newAccess}', ${userID})`;
+
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  connection.query(SQLquery, (err, results, fields) => {
+    if (!err) {
+      connection.end();
+      res.send({
+        status: "Success",
+        message: "Blog ajouté avec succès",
+      });
+    } else {
+      console.error("Erreur lors de l'insertion du blog :", err);
+      connection.end();
+      res.send({
+        status: "Error",
+        message: "Échec de l'ajout du blog",
       });
     }
   });
@@ -576,6 +620,9 @@ app.post("/edit-publication", (req, res) => {
   let id_publication = req.body[0]["id_publication"];
 
   let SQLquery;
+
+  SQLquery = `UPDATE publications SET Title = '${newTitle}', Description = '${newDescription}' WHERE ID_publication = ${id_publication}`;
+
   const connection = mysql.createConnection({
     host: process.env.HOST_MYSQL,
     user: process.env.USERNAME_MYSQL,
@@ -583,15 +630,15 @@ app.post("/edit-publication", (req, res) => {
     database: process.env.DATABASE_MYSQL,
   });
 
-  SQLquery = `UPDATE publications SET Title = '${newTitle}', Description = '${newDescription}' WHERE ID_publication = ${id_publication}`;
-
   connection.query(SQLquery, async (err, results, fields) => {
     if (results.length != 0) {
+      connection.end();
       res.send({
         status: "Success",
         message: "Modification effectué avec succès ",
       });
     } else {
+      connection.end();
       res.send({
         status: "Error",
         message: "echec de la modification",
@@ -600,8 +647,16 @@ app.post("/edit-publication", (req, res) => {
   });
 });
 
-// Route pour récupérer l'intégralité des blogs
-app.get("/blog", (req, res) => {
+// Route pour mettre à jour un blog
+app.post("/edit-blog", (req, res) => {
+  let newTitle = req.body[0]["newTitle"];
+  let newAccess = req.body[0]["newAccess"];
+  let id_blog = req.body[0]["id_blog"];
+
+  let SQLquery;
+
+  SQLquery = `UPDATE blogs SET Title = '${newTitle}', Access = '${newAccess}' WHERE ID_blog = ${id_blog}`;
+
   const connection = mysql.createConnection({
     host: process.env.HOST_MYSQL,
     user: process.env.USERNAME_MYSQL,
@@ -609,16 +664,69 @@ app.get("/blog", (req, res) => {
     database: process.env.DATABASE_MYSQL,
   });
 
+  connection.query(SQLquery, async (err, results, fields) => {
+    if (results.length != 0) {
+      connection.end();
+      res.send({
+        status: "Success",
+        message: "Modification effectué avec succès ",
+      });
+    } else {
+      connection.end();
+      res.send({
+        status: "Error",
+        message: "echec de la modification",
+      });
+    }
+  });
+});
+
+app.post("/delete-blog", (req, res) => {
+  let SQLquery;
+
+  let id_blog = req.body[0]["id_blog"];
+
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+
+  SQLquery = `DELETE FROM publications WHERE Blog_ID = ${id_blog}`;
+  connection.query(SQLquery, async (err, results, fields) => {
+    SQLquery = `DELETE FROM blogs WHERE ID_blog = ${id_blog}`;
+    connection.query(SQLquery, async (err, results, fields) => {
+      connection.end();
+      res.send({
+        status: "Success",
+        message: "Publication supprimée avec succès",
+      });
+    });
+  });
+});
+
+// Route pour récupérer l'intégralité des blogs
+app.get("/blog", (req, res) => {
   const id_blog = req.query.idblog;
+
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
 
   connection.query(
     `SELECT * from blogs WHERE ID_blog = ${id_blog}`,
     async (err, results, fields) => {
       if (results.length != 0) {
+        connection.end();
         res.send({
           blog: results[0],
         });
       } else {
+        connection.end();
         res.send({
           status: "Error",
           message: "echec envoi des blogs",
@@ -680,12 +788,34 @@ app.post("/verify", (req, res) => {
         var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
         decoded.doubleAuthent = true;
         tokenJWT = jwt.sign(decoded, process.env.SECRET_KEY_JWT);
+
+        // On stocke le JWT en BD (WhiteList)
+
+        const SQLquery = `INSERT INTO UserJWT (User_ID, JWT) VALUES ('${decoded.ID_user}', '${tokenJWT}')`;
+
+        const connection = mysql.createConnection({
+          host: process.env.HOST_MYSQL,
+          user: process.env.USERNAME_MYSQL,
+          password: process.env.PASSWORD_MYSQL,
+          database: process.env.DATABASE_MYSQL,
+        });
+
+        connection.query(SQLquery, (err, results, fields) => {
+          if (!err) {
+            console.error("Insertion du JWT :", err);
+          } else {
+            console.error("Erreur lors de l'insertion du JWT:", err);
+          }
+        });
+
+        connection.end();
         res.send({
           status: "Success",
           message: "Code Valide",
           tokenJWT: tokenJWT,
         });
       } catch (error) {
+        connection.end();
         res.send({
           status: "Error",
           message: error.message,
@@ -728,7 +858,6 @@ app.post("/enable-2fa", (req, res) => {
     } else {
       // Si le token est valide, c'est oui
 
-      // Update dans la BD
       const connection = mysql.createConnection({
         host: process.env.HOST_MYSQL,
         user: process.env.USERNAME_MYSQL,
@@ -740,13 +869,14 @@ app.post("/enable-2fa", (req, res) => {
         `UPDATE USERS SET 2faIsActivated = 1 WHERE Email = '${emailUser}'`,
         async (err, results, fields) => {
           if (!err) {
-            // Redirection vers Home avec stockage de la double authent
+            connection.end();
             res.send({
               status: "Success",
               message: "Code Valide",
             });
           } else {
             console.error("Erreur de connexion à la base de données :", err);
+            connection.end();
             res.send({
               status: "Error",
               message: "Impossible de mettre à jour le compte :" + err,
@@ -787,6 +917,96 @@ app.post("/get-cookies", (req, res) => {
       email: false,
     });
   }
+});
+
+app.post("/logoutAll", (req, res) => {
+  const authenticatorSecret = process.env.AUTHENTICATOR_SECRET;
+  //Récupération du code saisi par l'utilisateur
+  const token = req.body[0].token;
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+  var decoded = jwt.verify(tokenJWT, process.env.SECRET_KEY_JWT);
+
+  // On vérifie si le code est bon
+  const isValid = authenticator.check(token, authenticatorSecret);
+  if (isValid) {
+    SQLquery = `DELETE FROM UserJWT WHERE User_ID = ${decoded.ID_user}`;
+
+    const connection = mysql.createConnection({
+      host: process.env.HOST_MYSQL,
+      user: process.env.USERNAME_MYSQL,
+      password: process.env.PASSWORD_MYSQL,
+      database: process.env.DATABASE_MYSQL,
+    });
+
+    connection.query(SQLquery, async (err, results, fields) => {
+      connection.end();
+      res.send({
+        status: "Success",
+        message: "Token supprimés avec succès",
+      });
+    });
+  } else {
+    connection.end();
+    res.send({
+      status: "Error",
+      message: "Token Invalide",
+    });
+  }
+});
+
+app.post("/logout", (req, res) => {
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+
+  SQLquery = `DELETE FROM UserJWT WHERE JWT = '${tokenJWT}'`;
+
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+  connection.query(SQLquery, async (err, results, fields) => {
+    if (!err) {
+      connection.end();
+      res.send({
+        status: "Success",
+        message: "Vous êtes déconnecté avec succès",
+      });
+    } else {
+      connection.end();
+      res.send({
+        status: "Error",
+        message: "Erreur de déconnexion",
+      });
+    }
+  });
+});
+
+app.post("/check-jwt", (req, res) => {
+  let tokenJWT = req.body[0].tokenJWT.tokenJWT;
+
+  const connection = mysql.createConnection({
+    host: process.env.HOST_MYSQL,
+    user: process.env.USERNAME_MYSQL,
+    password: process.env.PASSWORD_MYSQL,
+    database: process.env.DATABASE_MYSQL,
+  });
+  SQLquery = `SELECT JWT from userjwt WHERE JWT = '${tokenJWT}'`;
+
+  connection.query(SQLquery, async (err, results, fields) => {
+    if (results.length !== 0) {
+      connection.end();
+      res.send({
+        status: "Success",
+      });
+    } else {
+      connection.end();
+      res.send({
+        status: "Error",
+        message: "Veuillez vous reconnecter ! ",
+      });
+    }
+  });
 });
 
 app.listen(5000, () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Link, useLocation } from "react-router-dom";
@@ -8,25 +8,9 @@ import { useCookies } from "react-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-function TfaForm() {
+function LogoutAll() {
   const navigate = useNavigate();
-
-  // Utilisez useLocation pour obtenir l'objet location
-  const location = useLocation();
-
-  // Utilisez location.search pour obtenir la chaîne de requête (ex: "?param1=valeur1&param2=valeur2")
-  const searchParams = new URLSearchParams(location.search);
-
-  // Utilisez get pour récupérer la valeur d'un paramètre spécifique
-  let tokenJWT = searchParams.get("tokenJWT");
-
-  const [cookies, setCookie] = useCookies(["tokenJWT"]);
-
-  useEffect(() => {
-    if (tokenJWT) {
-      setCookie("tokenJWT", tokenJWT, { path: "/" });
-    }
-  }, [tokenJWT, setCookie]);
+  const [cookies, setCookie, removeCookie] = useCookies(["tokenJWT"]);
 
   const [code, setCode] = useState("");
 
@@ -36,7 +20,7 @@ function TfaForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const sendLogin = async () => {
+    const sendData = async () => {
       const data = [code, cookies];
       const columnNames = ["token", "tokenJWT"];
 
@@ -48,7 +32,7 @@ function TfaForm() {
       ];
 
       await axios
-        .post("http://localhost:5000/verify", JSON.stringify(jsonData), {
+        .post("http://localhost:5000/logoutAll", JSON.stringify(jsonData), {
           headers: {
             "Content-Type": "application/json",
           },
@@ -58,12 +42,12 @@ function TfaForm() {
             toast.error(res.data.message);
           } else {
             toast.success(res.data.message);
-            setCookie("tokenJWT", res.data.tokenJWT, { path: "/" });
+            removeCookie(["tokenJWT"]);
             setTimeout(navigate("/home"), 5000);
           }
         });
     };
-    sendLogin();
+    sendData();
     try {
     } catch (e) {}
   };
@@ -92,9 +76,9 @@ function TfaForm() {
             required
           />
 
-          <button type="submit">Valider le Code</button>
+          <button type="submit">Valider la déconnexion</button>
           <button type="button" className="btn-retour">
-            <Link to="/home">Pas pour le moment</Link>
+            <Link to="/home">Annuler </Link>
           </button>
         </form>
       </div>
@@ -102,4 +86,4 @@ function TfaForm() {
   );
 }
 
-export default TfaForm;
+export default LogoutAll;

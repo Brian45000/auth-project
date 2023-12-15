@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { user_info } from "../../store/selector";
 import { useSelector } from "react-redux";
 import { useCookies } from "react-cookie";
+import { ToastContainer, toast } from "react-toastify";
 import axios from "axios";
 
 function NavBar() {
@@ -17,6 +18,34 @@ function NavBar() {
   const [email, setEmail] = useState();
 
   useEffect(() => {
+    const getcheckToken = async () => {
+      const data = [cookies];
+      const columnNames = ["tokenJWT"];
+
+      const jsonData = [
+        data.reduce((obj, val, i) => {
+          obj[columnNames[i]] = val;
+          return obj;
+        }, {}),
+      ];
+      await axios
+        .post("http://localhost:5000/check-jwt", JSON.stringify(jsonData), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        .then((res) => {
+          if (res.data.status === "Error") {
+            if (cookies["tokenJWT"]) {
+              toast.error(res.data.message);
+              removeCookie(["tokenJWT"]);
+              navigate("/home");
+            }
+          }
+        });
+    };
+    getcheckToken();
+
     const getInfoToken = async () => {
       const data = [cookies];
       const columnNames = ["tokenJWT"];
@@ -41,10 +70,34 @@ function NavBar() {
         });
     };
     getInfoToken();
-  }, [cookies]);
+  }, [cookies, removeCookie, navigate]);
 
-  const handleLogout = (e) => {
-    removeCookie(["tokenJWT"]);
+  const handleLogout = async () => {
+    const data = [cookies];
+    const columnNames = ["tokenJWT"];
+
+    const jsonData = [
+      data.reduce((obj, val, i) => {
+        obj[columnNames[i]] = val;
+        return obj;
+      }, {}),
+    ];
+
+    await axios
+      .post("http://localhost:5000/logout", JSON.stringify(jsonData), {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      .then((res) => {
+        if (res.data.status === "Error") {
+          toast.error(res.data.message);
+        } else {
+          toast.success(res.data.message);
+          removeCookie(["tokenJWT"]);
+          navigate("/home");
+        }
+      });
   };
 
   return (
@@ -59,11 +112,8 @@ function NavBar() {
           </li>
         )}
         {loggedIn && doubleAuth && (
-          <li className="dropdown">
-            <button className="dropbtn">Mes espaces 👇</button>
-            <div className="dropdown-content">
-              <Link to={"/2fa"}>Créer un espace ➕</Link>
-            </div>
+          <li>
+            <Link to={"/dashboard"}>Espace Personnel 🔒</Link>
           </li>
         )}
         {loggedIn && (
@@ -91,7 +141,6 @@ function NavBar() {
               </button>
               {doubleAuth && (
                 <>
-                  <Link to={"/dashboard"}>Espace Personnel 🔒</Link>
                   <Link to={"/logoutAll"}>Se déconnecter de PARTOUT ❌</Link>
                 </>
               )}
