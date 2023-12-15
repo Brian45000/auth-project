@@ -68,7 +68,9 @@ function LogoutAll() {
           <h2>
             Voulez vous vraiment vous déconnecter de tout les équipements ?{" "}
           </h2>
-          <label for="authCode">Code d'Authentification à Deux Facteurs:</label>
+          <label htmlFor="authCode">
+            Code d'Authentification à Deux Facteurs:
+          </label>
           <input
             type="text"
             id="authCode"

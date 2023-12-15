@@ -107,7 +107,7 @@ function Enable2faForm() {
             <div dangerouslySetInnerHTML={{ __html: imageQRCode }} />
           )}
 
-          <label for="authCode">Saisir le code:</label>
+          <label htmlFor="authCode">Saisir le code:</label>
           <input
             type="text"
             id="authCode"

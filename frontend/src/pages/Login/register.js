@@ -3,8 +3,12 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import "../../assets/formStyle.css";
 import NavBar from "../../components/NavBar";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Register() {
+  const navigate = useNavigate();
   const [values, setValues] = React.useState({
     fullname: "",
     email: "",
@@ -42,7 +46,14 @@ function Register() {
               "Content-Type": "application/json",
             },
           })
-          .then((res) => {});
+          .then((res) => {
+            if (res.data.status === "Success") {
+              toast.success(res.data.message);
+              navigate("/home");
+            } else {
+              toast.error(res.data.message);
+            }
+          });
       };
       sendRegister();
     } catch (e) {}
@@ -60,6 +71,9 @@ function Register() {
 
   return (
     <>
+      <aside>
+        <ToastContainer />
+      </aside>
       <NavBar />
 
       <div className="card-login">
@@ -120,10 +134,10 @@ function Register() {
           </button>
         </form>
         <button className="btn-google" onClick={registerWithGoogle}>
-          Connexion avec Google 🔍
+          S'inscrire avec Google 🔍
         </button>
         <button className="btn-github" onClick={registerWithGithub}>
-          Connexion avec Github 🔑
+          S'inscrire avec Github 🔑
         </button>
       </div>
     </>

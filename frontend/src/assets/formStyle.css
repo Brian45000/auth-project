@@ -47,8 +47,15 @@ button:hover {
     background-color: #4285F4 ;
 }
 
+.btn-google:hover{
+    background-color: #356bc2 ;
+}
+
 .btn-github {
     background-color: #171515;
+}
+.btn-github:hover {
+    background-color: #353131;
 }
 
 .btn-create-account {
