@@ -58,7 +58,7 @@ function Enable2faForm() {
           setDoubleAuth(res.data.doubleAuthent);
           setLoggedIn(res.data.loggedIn);
 
-          if (!loggedIn) {
+          if (!res.data.loggedIn) {
             navigate("/home");
           }
         });
